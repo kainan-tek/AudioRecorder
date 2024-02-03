@@ -12,7 +12,6 @@ import android.util.Log
 import android.widget.Button
 import androidx.core.app.ActivityCompat
 import java.io.File
-import java.io.FileNotFoundException
 import java.io.FileOutputStream
 import java.io.IOException
 import java.text.SimpleDateFormat
@@ -34,6 +33,7 @@ class MainActivity : AppCompatActivity() {
         private const val ENCODING = AudioFormat.ENCODING_PCM_16BIT
         private const val CHANNELS = 1       // just for dump file name
         private const val PCM_ENCODING = 16  // just for dump file name
+        // dump file path: /storage/emulated/0/Android/data/com.example.audiorecorder/files/Music/
         private const val DUMP_FILE = "${SAMPLE_RATE}Hz_${CHANNELS}ch_${PCM_ENCODING}bit_record.pcm"
     }
 
@@ -129,15 +129,10 @@ class MainActivity : AppCompatActivity() {
 
                     while (audioRecord!=null) {
                         val bytesRead = audioRecord?.read(buffer, 0, bufferSizeInBytes*2)!!
-                        if (bytesRead > 0) {
-                            fileOutputStream.write(buffer,0,bytesRead)
-                        }
+                        if (bytesRead > 0) fileOutputStream.write(buffer,0,bytesRead)
                     }
-                } catch (e: FileNotFoundException) {
-                    Log.e(LOG_TAG, "File not found.")
-                    e.printStackTrace()
                 } catch (e: Exception) {
-                    Log.e(LOG_TAG, "Exception while write data")
+                    Log.e(LOG_TAG, "Exception: ")
                     e.printStackTrace()
                 } finally {
                     try {
