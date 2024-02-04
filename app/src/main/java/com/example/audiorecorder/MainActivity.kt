@@ -20,7 +20,6 @@ import java.util.Locale
 
 class MainActivity : AppCompatActivity() {
     private var isStart = false
-    private var isStop = true
     private var bufferSizeInBytes = 0
     private var audioRecord: AudioRecord? = null
 
@@ -33,7 +32,7 @@ class MainActivity : AppCompatActivity() {
         private const val ENCODING = AudioFormat.ENCODING_PCM_16BIT
         private const val CHANNELS = 1       // just for dump file name
         private const val PCM_ENCODING = 16  // just for dump file name
-        // dump file path: /storage/emulated/0/Android/data/com.example.audiorecorder/files/Music/
+        // dump file path: /storage/emulated/0/Android/data/com.example.audiorecorder/files/Music
         private const val DUMP_FILE = "${SAMPLE_RATE}Hz_${CHANNELS}ch_${PCM_ENCODING}bit_record.pcm"
     }
 
@@ -44,21 +43,10 @@ class MainActivity : AppCompatActivity() {
         val button1: Button = findViewById(R.id.button1)
         val button2: Button = findViewById(R.id.button2)
         button1.setOnClickListener {
-            Log.i(LOG_TAG,"start AudioCapture, isStart: $isStart, isStop: $isStop")
-            if (isStop) {
-                initAudioCapture()
-                startAudioCapture()
-                isStart = true
-                isStop = false
-            }
+            startAudioCapture()
         }
         button2.setOnClickListener {
-            Log.i(LOG_TAG,"stop AudioCapture, isStart: $isStart, isStop: $isStop")
-            if (isStart) {
-                stopAudioCapture()
-                isStop = true
-                isStart = false
-            }
+            stopAudioCapture()
         }
 
         ActivityCompat.requestPermissions(
@@ -111,6 +99,11 @@ class MainActivity : AppCompatActivity() {
     }
 
     private fun startAudioCapture() {
+        Log.i(LOG_TAG,"start AudioCapture, isStart: $isStart")
+        if (isStart){
+            Log.i(LOG_TAG,"in recording status, needn't start again")
+            return
+        }
         class AudioRecordThread: Thread() {
             override fun run() {
                 super.run()
@@ -143,12 +136,18 @@ class MainActivity : AppCompatActivity() {
                 }
             }
         }
+        initAudioCapture()
         AudioRecordThread().start()
+        isStart = true
     }
 
     private fun stopAudioCapture() {
-        audioRecord?.stop()
-        audioRecord?.release()
-        audioRecord = null
+        Log.i(LOG_TAG,"stop AudioCapture, isStart: $isStart")
+        if (isStart) {
+            audioRecord?.stop()
+            audioRecord?.release()
+            audioRecord = null
+            isStart = false
+        }
     }
 }
