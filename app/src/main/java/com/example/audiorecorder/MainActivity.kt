@@ -7,16 +7,16 @@ import android.media.AudioRecord
 import android.media.MediaRecorder
 import androidx.appcompat.app.AppCompatActivity
 import android.os.Bundle
-import android.os.Environment
+// import android.os.Environment
 import android.util.Log
 import android.widget.Button
 import androidx.core.app.ActivityCompat
 import java.io.File
 import java.io.FileOutputStream
 import java.io.IOException
-import java.text.SimpleDateFormat
-import java.util.Calendar
-import java.util.Locale
+// import java.text.SimpleDateFormat
+// import java.util.Calendar
+// import java.util.Locale
 
 class MainActivity : AppCompatActivity() {
     private var isStart = false
@@ -31,11 +31,10 @@ class MainActivity : AppCompatActivity() {
         private const val SAMPLE_RATE = 48000
         private const val CHANNEL_MASK = AudioFormat.CHANNEL_IN_MONO
         private const val ENCODING = AudioFormat.ENCODING_PCM_16BIT
-        private const val CHANNELS = 1       // just for dump file name
-        private const val PCM_ENCODING = 16  // just for dump file name
-        // dump file path: /storage/emulated/0/Android/data/com.example.audiorecorder/files/Music
-        private const val DUMP_FILE = "${SAMPLE_RATE}Hz_${CHANNELS}ch_${PCM_ENCODING}bit_record.pcm"
-        // private const val DUMP_FILE1 = "/data/record_48k_1ch_16bit.raw"
+        // private const val CHANNELS = 1       // just for dump file name
+        // private const val PCM_ENCODING = 16  // just for dump file name
+        // private const val DUMP_FILE = "${SAMPLE_RATE}Hz_${CHANNELS}ch_${PCM_ENCODING}bit_record.pcm"
+        private const val DUMP_FILE = "/data/record_48k_1ch_16bit.raw" // need to create the file manually
     }
 
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -113,18 +112,24 @@ class MainActivity : AppCompatActivity() {
                 var fileOutputStream: FileOutputStream? = null
                 try {
                     val buffer = ByteArray(minBufSizeInBytes * numOfMinBuf)
-                    val currentDate = Calendar.getInstance().time
-                    val dateFormat = SimpleDateFormat("yyyy_MM_dd_HH_mm_ss", Locale.getDefault())
-                    val formattedDate = dateFormat.format(currentDate)
-                    val outputFile = File(getExternalFilesDir(Environment.DIRECTORY_MUSIC), "${formattedDate}_${DUMP_FILE}")
+                    // val currentDate = Calendar.getInstance().time
+                    // val dateFormat = SimpleDateFormat("yyyy_MM_dd_HH_mm_ss", Locale.getDefault())
+                    // val formattedDate = dateFormat.format(currentDate)
+                    // dump file path: /storage/emulated/0/Android/data/com.example.audiorecorder/files/Music
+                    // val outputFile = File(getExternalFilesDir(Environment.DIRECTORY_MUSIC), "${formattedDate}_${DUMP_FILE}")
+                    val outputFile = File(DUMP_FILE)
                     fileOutputStream = FileOutputStream(outputFile)
-                    Log.i(LOG_TAG, "Created file: $outputFile")
+                    Log.i(LOG_TAG, "record file: $outputFile")
 
                     audioRecord?.startRecording()
 
-                    while (audioRecord!=null) {
-                        val bytesRead = audioRecord?.read(buffer, 0, minBufSizeInBytes * numOfMinBuf)!!
-                        if (bytesRead > 0) fileOutputStream.write(buffer,0,bytesRead)
+                    while (audioRecord != null) {
+                        if (isStart) {
+                            val bytesRead = audioRecord?.read(buffer, 0, minBufSizeInBytes * numOfMinBuf)!!
+                            if (bytesRead > 0) fileOutputStream.write(buffer,0,bytesRead)
+                        } else {
+                            stopCapture()
+                        }
                     }
                 } catch (e: Exception) {
                     Log.e(LOG_TAG, "Exception: ")
@@ -139,17 +144,20 @@ class MainActivity : AppCompatActivity() {
             }
         }
         initAudioCapture()
-        AudioRecordThread().start()
         isStart = true
+        AudioRecordThread().start()
     }
 
     private fun stopAudioCapture() {
         Log.i(LOG_TAG,"stop AudioCapture, isStart: $isStart")
         if (isStart) {
-            audioRecord?.stop()
-            audioRecord?.release()
-            audioRecord = null
             isStart = false
         }
+    }
+
+    private fun stopCapture() {
+        audioRecord?.stop()
+        audioRecord?.release()
+        audioRecord = null
     }
 }
