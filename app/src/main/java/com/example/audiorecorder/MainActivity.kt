@@ -20,8 +20,8 @@ import java.io.IOException
 
 class MainActivity : AppCompatActivity() {
     private var isStart = false
-    private var minBufSizeInBytes = 0
     private var numOfMinBuf = 2
+    private var minBufSizeInBytes = 0
     private var audioRecord: AudioRecord? = null
 
     companion object {
@@ -65,8 +65,7 @@ class MainActivity : AppCompatActivity() {
         minBufSizeInBytes = AudioRecord.getMinBufferSize(
             SAMPLE_RATE,
             CHANNEL_MASK,
-            ENCODING
-        )
+            ENCODING)
         Log.i(LOG_TAG, "AudioRecord getMinBufferSize: $minBufSizeInBytes")
 
         if (checkSelfPermission(Manifest.permission.RECORD_AUDIO) != PackageManager.PERMISSION_GRANTED) {
@@ -86,17 +85,29 @@ class MainActivity : AppCompatActivity() {
                     .setSampleRate(SAMPLE_RATE)
                     .setChannelMask(CHANNEL_MASK)
                     .setEncoding(ENCODING)
-                    .build()
-            )
+                    .build())
             .setBufferSizeInBytes(minBufSizeInBytes * numOfMinBuf)
             .build()
-        Log.i(
-            LOG_TAG, "set AudioRecord params: " +
-                    "source ${AUDIO_SOURCE}, " +
-                    "SampleRate ${SAMPLE_RATE}, " +
-                    "ChannelMask ${CHANNEL_MASK}, " +
-                    "Encoding $ENCODING"
-        )
+
+        Log.i(LOG_TAG, "set AudioRecord params: " +
+                "source ${AUDIO_SOURCE}, " +
+                "SampleRate ${SAMPLE_RATE}, " +
+                "ChannelMask ${CHANNEL_MASK}, " +
+                "Encoding $ENCODING, " +
+                "BufferSizeInFrames ${audioRecord!!.bufferSizeInFrames}")
+
+        // specify the device address with setPreferredDevice
+        /*
+        val audioManager = getSystemService(AUDIO_SERVICE) as AudioManager
+        val devices = audioManager.getDevices(AudioManager.GET_DEVICES_INPUTS)
+        for (device in devices) {
+            Log.i(LOG_TAG,"device address: ${device.address}")
+            if (device.address == "Built-In Mic"){
+                audioRecord!!.setPreferredDevice(device)
+                break
+            }
+        }
+        */
     }
 
     private fun startAudioCapture() {
@@ -111,7 +122,7 @@ class MainActivity : AppCompatActivity() {
 
                 var fileOutputStream: FileOutputStream? = null
                 try {
-                    val buffer = ByteArray(minBufSizeInBytes * numOfMinBuf)
+                    val buffer = ByteArray(minBufSizeInBytes)
                     // val currentDate = Calendar.getInstance().time
                     // val dateFormat = SimpleDateFormat("yyyy_MM_dd_HH_mm_ss", Locale.getDefault())
                     // val formattedDate = dateFormat.format(currentDate)
@@ -125,7 +136,7 @@ class MainActivity : AppCompatActivity() {
 
                     while (audioRecord != null) {
                         if (isStart) {
-                            val bytesRead = audioRecord?.read(buffer, 0, minBufSizeInBytes * numOfMinBuf)!!
+                            val bytesRead = audioRecord?.read(buffer, 0, minBufSizeInBytes)!!
                             if (bytesRead > 0) fileOutputStream.write(buffer,0,bytesRead)
                         } else {
                             stopCapture()
