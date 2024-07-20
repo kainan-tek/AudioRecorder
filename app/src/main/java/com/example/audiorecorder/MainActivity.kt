@@ -13,31 +13,11 @@ import androidx.core.app.ActivityCompat
 import java.io.File
 import java.io.FileNotFoundException
 import java.io.FileOutputStream
-// import java.io.IOException
-// import android.os.Environment
-// import java.io.RandomAccessFile
 // import java.text.SimpleDateFormat
 // import java.util.Calendar
 // import java.util.Locale
 
 class MainActivity : AppCompatActivity() {
-    private var isStart = false
-    private var numOfMinBuf = 2
-    private var minBufSizeInBytes = 0
-    private var audioRecord: AudioRecord? = null
-    private var fileOutputStream: FileOutputStream? = null
-
-    companion object {
-        private const val LOG_TAG = "AudioRecorder"
-        // MIC VOICE_UPLINK VOICE_CALL VOICE_RECOGNITION VOICE_COMMUNICATION
-        private const val AUDIO_SOURCE = MediaRecorder.AudioSource.MIC
-        private var SAMPLE_RATE = 48000
-        private var CHANNEL_MASK = AudioFormat.CHANNEL_IN_MONO
-        private var ENCODING = AudioFormat.ENCODING_PCM_16BIT
-        // private const val DUMP_FILE = "${SAMPLE_RATE}Hz_${CHANNELS}ch_${PCM_ENCODING}bit_record.pcm"
-        private const val DUMP_FILE = "/data/record_48k_1ch_16bit.wav" // need to create the file manually
-    }
-
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_main)
@@ -61,11 +41,33 @@ class MainActivity : AppCompatActivity() {
         )
     }
 
+    /*
+    AudioFormat.CHANNEL_IN_MONO
+    AudioFormat.CHANNEL_IN_STEREO
+    6291468 // CHANNEL_IN_2POINT0POINT2
+    1507340 // CHANNEL_IN_5POINT1
+    4092    // AUDIO_CHANNEL_IN_10
+    16380   // AUDIO_CHANNEL_IN_12
+    262140  // AUDIO_CHANNEL_IN_16
+    */
+    companion object {
+        private const val LOG_TAG = "AudioRecorder"
+        private var audioFile = "/data/record_48k_1ch_16bit.wav"
+        // MIC VOICE_UPLINK VOICE_CALL VOICE_RECOGNITION VOICE_COMMUNICATION
+        private var source = MediaRecorder.AudioSource.MIC
+        private var sampleRate = 48000
+        private var channelMask = AudioFormat.CHANNEL_IN_MONO
+        private var format = AudioFormat.ENCODING_PCM_16BIT
+
+        private var isStart = false
+        private var numOfMinBuf = 2
+        private var minBufSizeInBytes = 0
+        private var audioRecord: AudioRecord? = null
+        private var fileOutputStream: FileOutputStream? = null
+    }
+
     private fun initAudioCapture(): Boolean {
         Log.i(LOG_TAG, "initAudioCapture")
-        minBufSizeInBytes = AudioRecord.getMinBufferSize(SAMPLE_RATE, CHANNEL_MASK, ENCODING)
-        Log.i(LOG_TAG, "AudioRecord getMinBufferSize: $minBufSizeInBytes")
-
         if (checkSelfPermission(Manifest.permission.RECORD_AUDIO) != PackageManager.PERMISSION_GRANTED) {
             // TODO: Consider calling
             //    Activity#requestPermissions
@@ -76,32 +78,41 @@ class MainActivity : AppCompatActivity() {
             // for Activity#requestPermissions for more details.
             return false
         }
+
+        minBufSizeInBytes = AudioRecord.getMinBufferSize(sampleRate, channelMask, format)
+        Log.i(LOG_TAG, "AudioRecord getMinBufferSize: $minBufSizeInBytes")
+
         audioRecord = AudioRecord.Builder()
-            .setAudioSource(AUDIO_SOURCE)
+            .setAudioSource(source)
             .setAudioFormat(
                 AudioFormat.Builder()
-                    .setSampleRate(SAMPLE_RATE)
-                    .setChannelMask(CHANNEL_MASK)
-                    .setEncoding(ENCODING)
+                    .setSampleRate(sampleRate)
+                    .setChannelMask(channelMask)
+                    .setEncoding(format)
                     .build())
             .setBufferSizeInBytes(minBufSizeInBytes * numOfMinBuf)
             .build()
 
         Log.i(LOG_TAG, "set AudioRecord params: " +
-                "source ${AUDIO_SOURCE}, " +
-                "SampleRate ${SAMPLE_RATE}, " +
-                "ChannelMask ${CHANNEL_MASK}, " +
-                "Encoding $ENCODING, " +
+                "source ${source}, " +
+                "SampleRate ${sampleRate}, " +
+                "ChannelMask ${channelMask}, " +
+                "Encoding $format, " +
                 "BufferSizeInFrames ${audioRecord!!.bufferSizeInFrames}")
 
-        // var channelCount = channelCountFromInChannelMask(CHANNEL_MASK)
-        // var bytesPerSample = AudioFormat.getBytesPerSample(ENCODING)
-        val channelCount = when (CHANNEL_MASK) {
+        // var channelCount = channelCountFromInChannelMask(channelMask)
+        // var bytesPerSample = AudioFormat.getBytesPerSample(format)
+        val channelCount = when (channelMask) {
             AudioFormat.CHANNEL_IN_MONO -> 1
             AudioFormat.CHANNEL_IN_STEREO -> 2
+            6291468 -> 4  // CHANNEL_IN_2POINT0POINT2
+            1507340 -> 6  // CHANNEL_IN_5POINT1
+            4092 -> 10    // AUDIO_CHANNEL_IN_10
+            16380 -> 12   // AUDIO_CHANNEL_IN_12
+            262140 -> 16  // AUDIO_CHANNEL_IN_16
             else -> 1
         }
-        val bytesPerSample = when (ENCODING) {
+        val bytesPerSample = when (format) {
             AudioFormat.ENCODING_PCM_8BIT -> 1
             AudioFormat.ENCODING_PCM_16BIT -> 2
             AudioFormat.ENCODING_PCM_24BIT_PACKED -> 3
@@ -112,12 +123,12 @@ class MainActivity : AppCompatActivity() {
         // val currentDate = Calendar.getInstance().time
         // val dateFormat = SimpleDateFormat("yyyy_MM_dd_HH_mm_ss", Locale.getDefault())
         // val formattedDate = dateFormat.format(currentDate)
-        // dump file path: /storage/emulated/0/Android/data/com.example.audiorecorder/files/Music
-        // val outputFile = File(getExternalFilesDir(Environment.DIRECTORY_MUSIC), "${formattedDate}_${DUMP_FILE}")
-        val outputFile = File(DUMP_FILE)
+        // audioFile = "/data/record_${sampleRate/1000}k_${channelCount}ch_${bytesPerSample*8}bit_${formattedDate}.wav"
+        audioFile = "/data/record_${sampleRate/1000}k_${channelCount}ch_${bytesPerSample*8}bit.wav"
+        val outputFile = File(audioFile)
         try {
             fileOutputStream = FileOutputStream(outputFile)
-            writeWavHeader(fileOutputStream, SAMPLE_RATE, channelCount, bytesPerSample*8)
+            writeWavHeader(fileOutputStream, sampleRate, channelCount, bytesPerSample*8)
         } catch (e: SecurityException) {
             Log.e(LOG_TAG, "no permission to access the audio file")
             return false
