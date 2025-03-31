@@ -129,10 +129,10 @@ class MainActivity : AppCompatActivity() {
         try {
             fileOutputStream = FileOutputStream(outputFile)
             writeWavHeader(fileOutputStream, sampleRate, channelCount, bytesPerSample*8)
-        } catch (e: SecurityException) {
+        } catch (_: SecurityException) {
             Log.e(LOG_TAG, "no permission to access the audio file")
             return false
-        } catch (e: FileNotFoundException) {
+        } catch (_: FileNotFoundException) {
             Log.e(LOG_TAG, "audio file can't be created or opened")
             return false
         }
