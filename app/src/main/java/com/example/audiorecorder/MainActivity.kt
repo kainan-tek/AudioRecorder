@@ -48,6 +48,7 @@ class MainActivity : AppCompatActivity() {
     1507340 // CHANNEL_IN_5POINT1
     4092    // AUDIO_CHANNEL_IN_10
     16380   // AUDIO_CHANNEL_IN_12
+    65532   // AUDIO_CHANNEL_IN_14
     262140  // AUDIO_CHANNEL_IN_16
     */
     companion object {
@@ -64,6 +65,7 @@ class MainActivity : AppCompatActivity() {
         private var minBufSizeInBytes = 0
         private var audioRecord: AudioRecord? = null
         private var fileOutputStream: FileOutputStream? = null
+        private var isAudioFileCreated = false
     }
 
     private fun initAudioCapture(): Boolean {
@@ -109,6 +111,7 @@ class MainActivity : AppCompatActivity() {
             1507340 -> 6  // CHANNEL_IN_5POINT1
             4092 -> 10    // AUDIO_CHANNEL_IN_10
             16380 -> 12   // AUDIO_CHANNEL_IN_12
+            65532 -> 14   // AUDIO_CHANNEL_IN_14
             262140 -> 16  // AUDIO_CHANNEL_IN_16
             else -> 1
         }
@@ -129,14 +132,15 @@ class MainActivity : AppCompatActivity() {
         try {
             fileOutputStream = FileOutputStream(outputFile)
             writeWavHeader(fileOutputStream, sampleRate, channelCount, bytesPerSample*8)
+            isAudioFileCreated = true
+            Log.i(LOG_TAG, "record audio file: $outputFile")
         } catch (_: SecurityException) {
+            isAudioFileCreated = false
             Log.e(LOG_TAG, "no permission to access the audio file")
-            return false
         } catch (_: FileNotFoundException) {
+            isAudioFileCreated = false
             Log.e(LOG_TAG, "audio file can't be created or opened")
-            return false
         }
-        Log.i(LOG_TAG, "record audio file: $outputFile")
 
         /*
         // specify the device address with setPreferredDevice
@@ -162,6 +166,7 @@ class MainActivity : AppCompatActivity() {
         isStart = true
         if (!initAudioCapture()) {
             isStart = false
+            Log.e(LOG_TAG,"init fail, return")
             return
         }
         startCapture()
@@ -190,13 +195,15 @@ class MainActivity : AppCompatActivity() {
                 while (audioRecord != null) {
                     if (isStart) {
                         val bytesRead = audioRecord?.read(buffer, 0, minBufSizeInBytes)!!
-                        if (bytesRead > 0) {
+                        if ((bytesRead > 0) && (isAudioFileCreated == true)) {
                             fileOutputStream?.write(buffer,0,bytesRead)
                             totalBytesRead += bytesRead
                         }
                     } else {
                         stopCapture()
-                        fileOutputStream?.let { updateWavHeader(it,totalBytesRead + 44) }
+                        if (isAudioFileCreated == true) {
+                            fileOutputStream?.let { updateWavHeader(it,totalBytesRead + 44) }
+                        }
                     }
                 }
             }
