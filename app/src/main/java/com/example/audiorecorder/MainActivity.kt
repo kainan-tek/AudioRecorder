@@ -47,9 +47,9 @@ class MainActivity : AppCompatActivity() {
     6291468 // CHANNEL_IN_2POINT0POINT2
     1507340 // CHANNEL_IN_5POINT1
     4092    // AUDIO_CHANNEL_IN_10
-    16380   // AUDIO_CHANNEL_IN_12
-    65532   // AUDIO_CHANNEL_IN_14
-    262140  // AUDIO_CHANNEL_IN_16
+    16380   // AUDIO_CHANNEL_IN_12   0x3FFC
+    65532   // AUDIO_CHANNEL_IN_14   0xFFFC
+    262140  // AUDIO_CHANNEL_IN_16   0xFFFF
     */
     companion object {
         private const val LOG_TAG = "AudioRecorder"
