@@ -65,7 +65,7 @@ class MainActivity : AppCompatActivity() {
         private var minBufSizeInBytes = 0
         private var audioRecord: AudioRecord? = null
         private var fileOutputStream: FileOutputStream? = null
-        private var isAudioFileCreated = false
+        private var isRecordFileCreated = false
     }
 
     private fun initAudioCapture(): Boolean {
@@ -132,13 +132,13 @@ class MainActivity : AppCompatActivity() {
         try {
             fileOutputStream = FileOutputStream(outputFile)
             writeWavHeader(fileOutputStream, sampleRate, channelCount, bytesPerSample*8)
-            isAudioFileCreated = true
+            isRecordFileCreated = true
             Log.i(LOG_TAG, "record audio file: $outputFile")
         } catch (_: SecurityException) {
-            isAudioFileCreated = false
+            isRecordFileCreated = false
             Log.e(LOG_TAG, "no permission to access the audio file")
         } catch (_: FileNotFoundException) {
-            isAudioFileCreated = false
+            isRecordFileCreated = false
             Log.e(LOG_TAG, "audio file can't be created or opened")
         }
 
@@ -195,13 +195,13 @@ class MainActivity : AppCompatActivity() {
                 while (audioRecord != null) {
                     if (isStart) {
                         val bytesRead = audioRecord?.read(buffer, 0, minBufSizeInBytes)!!
-                        if ((bytesRead > 0) && (isAudioFileCreated == true)) {
+                        if (isRecordFileCreated && (bytesRead > 0)) {
                             fileOutputStream?.write(buffer,0,bytesRead)
                             totalBytesRead += bytesRead
                         }
                     } else {
                         stopCapture()
-                        if (isAudioFileCreated == true) {
+                        if (isRecordFileCreated) {
                             fileOutputStream?.let { updateWavHeader(it,totalBytesRead + 44) }
                         }
                     }

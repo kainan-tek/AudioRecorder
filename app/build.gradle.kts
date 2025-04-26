@@ -32,12 +32,11 @@ android {
     kotlinOptions {
         jvmTarget = "17"
     }
-    buildToolsVersion = "35.0.0"
+    buildToolsVersion = "35.0.1"
     ndkVersion = "27.0.12077973"
 }
 
 dependencies {
-
     implementation("androidx.core:core-ktx:1.13.1")
     implementation("androidx.appcompat:appcompat:1.7.0")
     implementation("com.google.android.material:material:1.12.0")
