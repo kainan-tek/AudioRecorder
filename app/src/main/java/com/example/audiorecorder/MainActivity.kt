@@ -17,7 +17,47 @@ import java.io.FileOutputStream
 // import java.util.Calendar
 // import java.util.Locale
 
+/**
+ * 使用步骤 *
+adb root
+adb remount
+adb shell setenforce 0
+adb push record_48k_1ch_16bit.wav /data/
+adb install xxx.apk
+ */
+
+/**
+ * channel mask *
+AudioFormat.CHANNEL_IN_MONO
+AudioFormat.CHANNEL_IN_STEREO
+6291468 // CHANNEL_IN_2POINT0POINT2
+1507340 // CHANNEL_IN_5POINT1
+4092    // AUDIO_CHANNEL_IN_10
+16380   // AUDIO_CHANNEL_IN_12   0x3FFC
+65532   // AUDIO_CHANNEL_IN_14   0xFFFC
+262140  // AUDIO_CHANNEL_IN_16   0xFFFF
+ */
+
 class MainActivity : AppCompatActivity() {
+    private var audioRecord: AudioRecord? = null
+    private var fileOutputStream: FileOutputStream? = null
+    private var isRecordFileCreated = false
+
+    private var isStart = false
+    private var sampleRate = 48000
+    private var channelMask = AudioFormat.CHANNEL_IN_MONO
+    private var format = AudioFormat.ENCODING_PCM_16BIT
+    private var minBufSizeInBytes = 0
+
+    // MIC VOICE_UPLINK VOICE_CALL VOICE_RECOGNITION VOICE_COMMUNICATION
+    companion object {
+        private const val LOG_TAG = "AudioRecorderDemo"
+        private const val AUDIO_FILE = "/data/record_48k_1ch_16bit.wav"
+        private const val SOURCE = MediaRecorder.AudioSource.MIC
+        private const val MIN_BUF_MULTIPLIER = 2
+        private const val WAV_HEADER_SIZE = 44
+    }
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_main)
@@ -41,33 +81,6 @@ class MainActivity : AppCompatActivity() {
         )
     }
 
-    /*
-    AudioFormat.CHANNEL_IN_MONO
-    AudioFormat.CHANNEL_IN_STEREO
-    6291468 // CHANNEL_IN_2POINT0POINT2
-    1507340 // CHANNEL_IN_5POINT1
-    4092    // AUDIO_CHANNEL_IN_10
-    16380   // AUDIO_CHANNEL_IN_12   0x3FFC
-    65532   // AUDIO_CHANNEL_IN_14   0xFFFC
-    262140  // AUDIO_CHANNEL_IN_16   0xFFFF
-    */
-    companion object {
-        private const val LOG_TAG = "AudioRecorder"
-        private var audioFile = "/data/record_48k_1ch_16bit.wav"
-        // MIC VOICE_UPLINK VOICE_CALL VOICE_RECOGNITION VOICE_COMMUNICATION
-        private var source = MediaRecorder.AudioSource.MIC
-        private var sampleRate = 48000
-        private var channelMask = AudioFormat.CHANNEL_IN_MONO
-        private var format = AudioFormat.ENCODING_PCM_16BIT
-
-        private var isStart = false
-        private var numOfMinBuf = 2
-        private var minBufSizeInBytes = 0
-        private var audioRecord: AudioRecord? = null
-        private var fileOutputStream: FileOutputStream? = null
-        private var isRecordFileCreated = false
-    }
-
     private fun initAudioCapture(): Boolean {
         Log.i(LOG_TAG, "initAudioCapture")
         if (checkSelfPermission(Manifest.permission.RECORD_AUDIO) != PackageManager.PERMISSION_GRANTED) {
@@ -85,18 +98,18 @@ class MainActivity : AppCompatActivity() {
         Log.i(LOG_TAG, "AudioRecord getMinBufferSize: $minBufSizeInBytes")
 
         audioRecord = AudioRecord.Builder()
-            .setAudioSource(source)
+            .setAudioSource(SOURCE)
             .setAudioFormat(
                 AudioFormat.Builder()
                     .setSampleRate(sampleRate)
                     .setChannelMask(channelMask)
                     .setEncoding(format)
                     .build())
-            .setBufferSizeInBytes(minBufSizeInBytes * numOfMinBuf)
+            .setBufferSizeInBytes(minBufSizeInBytes * MIN_BUF_MULTIPLIER)
             .build()
 
         Log.i(LOG_TAG, "set AudioRecord params: " +
-                "source ${source}, " +
+                "source ${SOURCE}, " +
                 "SampleRate ${sampleRate}, " +
                 "ChannelMask ${channelMask}, " +
                 "Encoding $format, " +
@@ -127,8 +140,8 @@ class MainActivity : AppCompatActivity() {
         // val dateFormat = SimpleDateFormat("yyyy_MM_dd_HH_mm_ss", Locale.getDefault())
         // val formattedDate = dateFormat.format(currentDate)
         // audioFile = "/data/record_${sampleRate/1000}k_${channelCount}ch_${bytesPerSample*8}bit_${formattedDate}.wav"
-        audioFile = "/data/record_${sampleRate/1000}k_${channelCount}ch_${bytesPerSample*8}bit.wav"
-        val outputFile = File(audioFile)
+//        audioFile = "/data/record_${sampleRate/1000}k_${channelCount}ch_${bytesPerSample*8}bit.wav"
+        val outputFile = File(AUDIO_FILE)
         try {
             fileOutputStream = FileOutputStream(outputFile)
             writeWavHeader(fileOutputStream, sampleRate, channelCount, bytesPerSample*8)
@@ -189,7 +202,7 @@ class MainActivity : AppCompatActivity() {
                 val buffer = ByteArray(minBufSizeInBytes)
                 if (audioRecord!!.state != AudioRecord.RECORDSTATE_RECORDING) {
                     audioRecord!!.startRecording()
-                    sleep(5)
+                    sleep(2)
                 }
                 var totalBytesRead = 0
                 while (audioRecord != null) {
@@ -202,7 +215,7 @@ class MainActivity : AppCompatActivity() {
                     } else {
                         stopCapture()
                         if (isRecordFileCreated) {
-                            fileOutputStream?.let { updateWavHeader(it,totalBytesRead + 44) }
+                            fileOutputStream?.let { updateWavHeader(it,totalBytesRead + WAV_HEADER_SIZE) }
                         }
                     }
                 }
@@ -220,7 +233,7 @@ class MainActivity : AppCompatActivity() {
 
     /*************** wav header function **********************************/
     private fun writeWavHeader(file: FileOutputStream?, sampleRate: Int, channels: Int, bitsPerSample: Int) {
-        val header = ByteArray(44)
+        val header = ByteArray(WAV_HEADER_SIZE)
         val byteRate = sampleRate * channels * bitsPerSample / 8
 
         // RIFF header
@@ -264,7 +277,7 @@ class MainActivity : AppCompatActivity() {
     }
 
     fun updateWavHeader(outputStream: FileOutputStream, fileSize: Int) {
-        val dataSize = fileSize - 44
+        val dataSize = fileSize - WAV_HEADER_SIZE
 
         val headerSize = intToByteArray(fileSize - 8)
         val dataSizeArray = intToByteArray(dataSize)
@@ -287,7 +300,7 @@ class MainActivity : AppCompatActivity() {
 
 //    fun updateWavHeader(file: File) {
 //        val fileSize = file.length().toInt()
-//        val dataSize = fileSize - 44
+//        val dataSize = fileSize - WAV_HEADER_SIZE
 //
 //        val raf = RandomAccessFile(file, "rw")
 //        raf.seek(4)
