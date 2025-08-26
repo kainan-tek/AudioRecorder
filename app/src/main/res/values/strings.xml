@@ -2,4 +2,15 @@
     <string name="app_name">AudioRecorder</string>
     <string name="button1">START</string>
     <string name="button2">STOP</string>
+    
+    <!-- New strings -->
+    <string name="start_recording">START</string>
+    <string name="stop_recording">STOP</string>
+    <string name="resume_recording">Resume Recording</string>
+    <string name="ready_to_record">Ready to record</string>
+    <string name="recording">Recording…</string>
+    <string name="paused">Paused</string>
+    <string name="error_occurred">Error occurred</string>
+    <string name="permissions_required">Permissions required to record audio</string>
+    <string name="permissions_required_settings">Please enable microphone permission in device settings</string>
 </resources>
