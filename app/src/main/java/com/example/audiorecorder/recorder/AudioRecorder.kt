@@ -3,11 +3,11 @@ package com.example.audiorecorder.recorder
 import android.Manifest
 import android.annotation.SuppressLint
 import android.content.Context
+import android.util.Log
 import java.io.File
 import android.media.AudioFormat
 import android.media.AudioRecord
 import android.media.MediaRecorder
-import android.util.Log
 import androidx.annotation.RequiresPermission
 import androidx.lifecycle.LiveData
 import androidx.lifecycle.MutableLiveData
@@ -17,7 +17,7 @@ import java.util.Date
 import java.util.concurrent.atomic.AtomicBoolean
 
 /**
- * status of recorder
+ * 录音器状态枚举
  */
 enum class RecorderState {
     IDLE,      // 空闲状态
@@ -41,14 +41,12 @@ class AudioRecorder(private val context: Context) {
         const val CHANNEL_IN_16 = 262140 // 0x3FFFC
     }
 
-
     private var audioSource = MediaRecorder.AudioSource.MIC
     private var sampleRate = DEFAULT_SAMPLE_RATE
     private var channels = DEFAULT_CHANNELS
     private var bitsPerSample = DEFAULT_BITS_PER_SAMPLE
     private var minBufSize = 0
     private var totalBytesRead = 0
-    // 如果audioRecordFile为空，就使用默认的文件路径，自动生成文件
     private var audioRecordFile: String = "/data/record_48k_1ch_16bit.wav"
 
     private var audioRecord: AudioRecord? = null
@@ -56,45 +54,34 @@ class AudioRecorder(private val context: Context) {
     private var recordingThread: Thread? = null
     private val isRecording = AtomicBoolean(false)
     
-    private val _recorderState = MutableLiveData<RecorderState>()
+    private val _recorderState = MutableLiveData(RecorderState.IDLE)
     val recorderState: LiveData<RecorderState> = _recorderState
     
     private val _errorMessage = MutableLiveData<String>()
     val errorMessage: LiveData<String> = _errorMessage
 
-    init {
-        _recorderState.value = RecorderState.IDLE
-    }
-
     @RequiresPermission(Manifest.permission.RECORD_AUDIO)
     fun startRecording(): Boolean {
-        Log.d(LOG_TAG, "startRecording() called")
         if (isRecording.get()) {
-            Log.w(LOG_TAG, "Already recording")
+            Log.d(LOG_TAG, "Already recording, ignoring start request")
             return false
         }
 
         try {
-            // 确定输出文件路径
+            Log.d(LOG_TAG, "Starting recording with: sampleRate=$sampleRate, channels=$channels, bitsPerSample=$bitsPerSample")
             val outputFilePath = audioRecordFile.ifEmpty { generateOutputFilePath() }
             Log.d(LOG_TAG, "Output file path: $outputFilePath")
             
-            // 初始化WAV文件
             waveFile = WaveFile(outputFilePath)
             if (waveFile?.create(sampleRate, channels, bitsPerSample) != true) {
-                // 检查文件是否存在
                 val file = File(outputFilePath)
-                val msg = if (file.exists()) {
-                    "File exists but access is denied"
-                } else {
-                    "File does not exist"
-                }
-                Log.e(LOG_TAG, msg)
+                val msg = if (file.exists()) "File exists but access is denied" else "File does not exist"
+                Log.e(LOG_TAG, "Failed to create WAV file: $msg")
                 _errorMessage.postValue(msg)
                 return false
             }
+            Log.d(LOG_TAG, "WAV file created successfully")
 
-            // 计算缓冲区大小
             val channelConfig = when (channels) {
                 1 -> AudioFormat.CHANNEL_IN_MONO
                 2 -> AudioFormat.CHANNEL_IN_STEREO
@@ -103,32 +90,33 @@ class AudioRecorder(private val context: Context) {
                 14 -> CHANNEL_IN_14
                 16 -> CHANNEL_IN_16
                 else -> {
+                    Log.e(LOG_TAG, "Unsupported channel count: $channels")
                     _errorMessage.postValue("Unsupported channel count: $channels")
                     return false
                 }
             }
-            Log.d(LOG_TAG, "Audio parameters - Sample rate: $sampleRate, Channels: $channels, Bits per sample: $bitsPerSample")
                 
-            // 根据位深度选择适当的编码格式
             val audioFormat = when (bitsPerSample) {
                 8 -> AudioFormat.ENCODING_PCM_8BIT
                 16 -> AudioFormat.ENCODING_PCM_16BIT
                 24 -> AudioFormat.ENCODING_PCM_24BIT_PACKED
                 32 -> AudioFormat.ENCODING_PCM_32BIT
                 else -> {
+                    Log.e(LOG_TAG, "Unsupported bit depth: $bitsPerSample")
                     _errorMessage.postValue("Unsupported bit depth: $bitsPerSample")
                     return false
                 }
             }
 
             minBufSize = AudioRecord.getMinBufferSize(sampleRate, channelConfig, audioFormat)
-            Log.d(LOG_TAG, "Calculated min buffer size: $minBufSize")
             if (minBufSize == AudioRecord.ERROR_BAD_VALUE || minBufSize == AudioRecord.ERROR) {
+                Log.e(LOG_TAG, "Invalid audio parameters, getMinBufferSize returned error")
                 _errorMessage.postValue("Invalid audio parameters")
                 return false
             }
+            Log.d(LOG_TAG, "Min buffer size: $minBufSize")
 
-            // 创建AudioRecord实例
+            Log.d(LOG_TAG, "Creating AudioRecord instance with buffer size: ${minBufSize * MIN_BUF_MULTIPLIER}")
             audioRecord = AudioRecord.Builder()
                 .setAudioSource(audioSource)
                 .setAudioFormat(
@@ -142,15 +130,16 @@ class AudioRecorder(private val context: Context) {
                 .build()
 
             if (audioRecord?.state != AudioRecord.STATE_INITIALIZED) {
+                Log.e(LOG_TAG, "Failed to initialize AudioRecord")
                 _errorMessage.postValue("Failed to initialize AudioRecord")
                 return false
             }
+            Log.d(LOG_TAG, "AudioRecord initialized successfully")
 
-            // 开始录音
             audioRecord?.startRecording()
             isRecording.set(true)
-            Log.i(LOG_TAG, "Recording started successfully")
             _recorderState.postValue(RecorderState.RECORDING)
+            Log.i(LOG_TAG, "Recording started successfully")
             
             startRecordingThread()
             
@@ -164,15 +153,14 @@ class AudioRecorder(private val context: Context) {
     }
 
     fun stopRecording(): Boolean {
-        Log.d(LOG_TAG, "stopRecording() called")
         if (!isRecording.get()) {
-            Log.w(LOG_TAG, "Not currently recording")
+            Log.d(LOG_TAG, "Not recording, ignoring stop request")
             return false
         }
 
         try {
+            Log.d(LOG_TAG, "Stopping recording, total bytes read: $totalBytesRead")
             isRecording.set(false)
-            Log.d(LOG_TAG, "Stopping recording thread")
             
             recordingThread?.join(1000)
             recordingThread = null
@@ -181,12 +169,14 @@ class AudioRecorder(private val context: Context) {
             audioRecord?.stop()
             audioRecord?.release()
             audioRecord = null
+            Log.d(LOG_TAG, "AudioRecord released")
             
             waveFile?.close()
             waveFile = null
+            Log.d(LOG_TAG, "WAV file closed")
             
             _recorderState.postValue(RecorderState.IDLE)
-            Log.i(LOG_TAG, "Recording stopped successfully, totalBytesRead: $totalBytesRead")
+            Log.i(LOG_TAG, "Recording stopped successfully")
             
             return true
 
@@ -198,7 +188,6 @@ class AudioRecorder(private val context: Context) {
     }
 
     private fun startRecordingThread() {
-        Log.d(LOG_TAG, "Starting recording thread")
         recordingThread = Thread {
             val buffer = ByteArray(minBufSize)
             totalBytesRead = 0
@@ -209,41 +198,39 @@ class AudioRecorder(private val context: Context) {
                     if (bytesRead > 0) {
                         waveFile?.writeAudioData(buffer, 0, bytesRead)
                         totalBytesRead += bytesRead
-                        // Log.v(LOG_TAG, "Wrote $bytesRead bytes to file")
+                        // 每读取一定量数据记录一次，避免日志过多
+                        if (totalBytesRead % (minBufSize * 100) == 0) {
+                            Log.d(LOG_TAG, "Recording in progress, total read: ${totalBytesRead}bytes, ${totalBytesRead/1024/1024}MB")
+                        }
                     } else if (bytesRead < 0) {
-                        Log.e(LOG_TAG, "Error: AudioRecord read returned $bytesRead")
+                        Log.w(LOG_TAG, "AudioRecord read returned error code: $bytesRead")
                         break
                     }
                 } catch (e: Exception) {
-                    Log.e(LOG_TAG, "Error in recording thread", e)
+                    Log.e(LOG_TAG, "Recording error", e)
                     _errorMessage.postValue("Recording error: ${e.message}")
                     break
                 }
             }
         }
         recordingThread?.start()
+        Log.d(LOG_TAG, "Recording thread started")
     }
 
-
     fun release() {
+        Log.d(LOG_TAG, "Releasing AudioRecorder resources")
         stopRecording()
     }
     
     /**
      * 生成输出文件路径
-     * 格式: /data/user/10/com.example.audiorecorder/files/recording_<sampleRate>_<channels>_<bitsPerSample>_<dateTime>.wav
      */
     @SuppressLint("SimpleDateFormat")
     private fun generateOutputFilePath(): String {
-        // 获取应用的内部存储目录
         val filesDir = context.filesDir
-        // 格式化当前时间为可读格式：年月日时分秒
         val dateFormat = SimpleDateFormat("yyyyMMdd_HHmmss")
         val dateTime = dateFormat.format(Date())
         val fileName = "recording_${sampleRate}Hz_${channels}ch_${bitsPerSample}bit_${dateTime}.wav"
-        // 组合目录和文件名
-        val filePath = File(filesDir, fileName).absolutePath
-        Log.d(LOG_TAG, "Generated output file path: $filePath")
-        return filePath
+        return File(filesDir, fileName).absolutePath
     }
 }

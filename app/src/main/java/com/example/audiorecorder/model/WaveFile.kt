@@ -7,7 +7,6 @@ import java.io.RandomAccessFile
 
 /**
  * WAV文件处理类，负责创建、写入和关闭WAV格式音频文件
- * @param filePath WAV文件保存路径
  */
 class WaveFile(private val filePath: String) {
     // 文件相关属性
@@ -29,13 +28,8 @@ class WaveFile(private val filePath: String) {
 
     /**
      * 创建WAV文件并写入文件头
-     * @param sampleRate 采样率
-     * @param channels 声道数
-     * @param bitsPerSample 位深度
-     * @return 是否创建成功
      */
     fun create(sampleRate: Int, channels: Int, bitsPerSample: Int): Boolean {
-        // 参数验证
         if (sampleRate <= 0 || channels <= 0 || bitsPerSample <= 0 || 
             bitsPerSample !in arrayOf(8, 16, 24, 32)) {
             return false
@@ -65,13 +59,8 @@ class WaveFile(private val filePath: String) {
 
     /**
      * 写入音频数据
-     * @param audioData 音频数据
-     * @param offset 偏移量
-     * @param length 数据长度
-     * @return 是否写入成功
      */
     fun writeAudioData(audioData: ByteArray, offset: Int, length: Int): Boolean {
-        // 参数验证
         if (offset < 0 || length < 0 || offset + length > audioData.size) {
             return false
         }
@@ -88,7 +77,6 @@ class WaveFile(private val filePath: String) {
 
     /**
      * 关闭文件并更新WAV头信息
-     * @return 是否关闭成功
      */
     fun close(): Boolean {
         return try {
@@ -167,9 +155,8 @@ class WaveFile(private val filePath: String) {
     // 更新WAV文件头中的音频数据长度信息
     private fun updateWavHeader() {
         try {
-            if (file?.exists() == true) {
-                RandomAccessFile(file, "rw").use { randomAccessFile ->
-                    // 直接使用类属性totalAudioLength而不是重新计算
+            file?.takeIf { it.exists() }?.let { fileObj ->
+                RandomAccessFile(fileObj, "rw").use { randomAccessFile ->
                     val totalDataLen = totalAudioLength + WAV_HEADER_SIZE - 8
 
                     // 更新文件总大小（偏移量4处）

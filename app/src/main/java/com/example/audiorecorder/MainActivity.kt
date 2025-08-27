@@ -1,14 +1,12 @@
 package com.example.audiorecorder
 
 import android.Manifest
-import android.annotation.SuppressLint
 import android.content.pm.PackageManager
 import android.os.Bundle
 import android.widget.Button
 import android.widget.TextView
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.app.ActivityCompat
-import androidx.lifecycle.Observer
 import androidx.lifecycle.ViewModelProvider
 import com.example.audiorecorder.recorder.RecorderState
 import com.example.audiorecorder.viewmodel.RecorderViewModel
@@ -26,7 +24,6 @@ class MainActivity : AppCompatActivity() {
         setContentView(R.layout.activity_main)
 
         viewModel = ViewModelProvider(this)[RecorderViewModel::class.java]
-
         setupViews()
         setupObservers()
         requestPermissions()
@@ -38,11 +35,7 @@ class MainActivity : AppCompatActivity() {
         statusTextView = findViewById(R.id.statusTextView)
 
         startButton.setOnClickListener {
-            if (ActivityCompat.checkSelfPermission(
-                    this,
-                    Manifest.permission.RECORD_AUDIO
-                ) == PackageManager.PERMISSION_GRANTED
-            ) {
+            if (ActivityCompat.checkSelfPermission(this, Manifest.permission.RECORD_AUDIO) == PackageManager.PERMISSION_GRANTED) {
                 viewModel.startRecording()
             } else {
                 requestPermissions()
@@ -55,18 +48,13 @@ class MainActivity : AppCompatActivity() {
     }
 
     private fun setupObservers() {
-        // 观察录音状态变化
-        viewModel.recorderState.observe(this, Observer { state ->
+        viewModel.recorderState.observe(this) { state ->
             updateUI(state)
-        })
+        }
 
-        // 观察错误消息
-        viewModel.errorMessage.observe(this, Observer { error ->
-            error?.let {
-                // 这里可以显示错误提示
-                statusTextView.text = it
-            }
-        })
+        viewModel.errorMessage.observe(this) {
+            it?.let { statusTextView.text = it }
+        }
     }
 
     private fun updateUI(state: RecorderState) {
@@ -94,23 +82,14 @@ class MainActivity : AppCompatActivity() {
         }
     }
 
-    @SuppressLint("SetTextI18n")
     private fun requestPermissions() {
-        // 检查录音权限
-        val hasAudioPermission = ActivityCompat.checkSelfPermission(
-            this,
-            Manifest.permission.RECORD_AUDIO
-        ) == PackageManager.PERMISSION_GRANTED
-        
-        if (!hasAudioPermission) {
-            // 请求权限
+        if (ActivityCompat.checkSelfPermission(this, Manifest.permission.RECORD_AUDIO) != PackageManager.PERMISSION_GRANTED) {
             ActivityCompat.requestPermissions(
                 this,
                 arrayOf(Manifest.permission.RECORD_AUDIO),
                 PERMISSION_REQUEST_CODE
             )
         } else {
-            // 所有权限都已授予，更新UI状态
             updateUI(RecorderState.IDLE)
         }
     }
@@ -123,23 +102,14 @@ class MainActivity : AppCompatActivity() {
         super.onRequestPermissionsResult(requestCode, permissions, grantResults)
         if (requestCode == PERMISSION_REQUEST_CODE && grantResults.isNotEmpty()) {
             if (grantResults[0] == PackageManager.PERMISSION_GRANTED) {
-                // 权限被授予
                 updateUI(RecorderState.IDLE)
             } else {
-                // 权限被拒绝
                 statusTextView.text = getString(R.string.permissions_required)
-                // 如果用户选择了"不再询问"
                 if (!ActivityCompat.shouldShowRequestPermissionRationale(this, Manifest.permission.RECORD_AUDIO)) {
-                    // 可以引导用户去设置中开启权限
                     statusTextView.text = getString(R.string.permissions_required_settings)
                 }
             }
         }
-    }
-
-    override fun onDestroy() {
-        super.onDestroy()
-        // ViewModel会自动清理资源
     }
 
     companion object {
