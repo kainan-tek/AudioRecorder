@@ -106,7 +106,7 @@ class AudioRecorder(private val context: Context) {
     }
 
     private fun createOutputFile(): Boolean {
-        val outputPath = currentConfig.outputFilePath.takeIf { it.isNotEmpty() } 
+        val outputPath = currentConfig.audioFilePath.takeIf { it.isNotEmpty() } 
             ?: generateOutputFilePath()
         
         waveFile = WaveFile(outputPath)
@@ -128,7 +128,7 @@ class AudioRecorder(private val context: Context) {
 
             val minBufferSize = AudioRecord.getMinBufferSize(
                 currentConfig.sampleRate, 
-                currentConfig.channelConfig, 
+                currentConfig.channelMask, 
                 currentConfig.audioFormat
             )
             
@@ -147,7 +147,7 @@ class AudioRecorder(private val context: Context) {
                 .setAudioFormat(
                     AudioFormat.Builder()
                         .setSampleRate(currentConfig.sampleRate)
-                        .setChannelMask(currentConfig.channelConfig)
+                        .setChannelMask(currentConfig.channelMask)
                         .setEncoding(currentConfig.audioFormat)
                         .build()
                 )

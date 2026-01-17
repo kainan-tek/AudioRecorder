@@ -20,22 +20,24 @@ data class AudioConfig(
     val channelCount: Int = 2, // 声道数量 (1-16)
     val audioFormat: Int = AudioFormat.ENCODING_PCM_16BIT,
     val bufferMultiplier: Int = 4,
-    val outputFilePath: String = "/data/recorded_audio.wav",
+    val audioFilePath: String = "/data/recorded_audio.wav",
     val minBufferSize: Int = 960,
     val description: String = "默认录音配置"
 ) {
-    // 根据声道数生成channelConfig
-    val channelConfig: Int
+    // 根据声道数生成channelMask
+    val channelMask: Int
         get() = when (channelCount) {
             1 -> AudioFormat.CHANNEL_IN_MONO
             2 -> AudioFormat.CHANNEL_IN_STEREO
+            // 4 -> AudioFormat.CHANNEL_IN_2POINT0POINT2
+            // 6 -> AudioFormat.CHANNEL_IN_5POINT1
             in 3..16 -> {
-                // 对于3-16声道，使用位掩码构建声道配置
-                var channelMask = 0
+                // 对于其他多声道，使用位掩码构建声道配置
+                var mask = 0
                 for (i in 0 until channelCount) {
-                    channelMask = channelMask or (1 shl i)
+                    mask = mask or (1 shl i)
                 }
-                channelMask
+                mask
             }
             else -> AudioFormat.CHANNEL_IN_STEREO
         }
@@ -119,7 +121,7 @@ data class AudioConfig(
                 channelCount = channelCount,
                 audioFormat = parseAudioFormatFromBits(audioFormatBits),
                 bufferMultiplier = json.optInt("bufferMultiplier", 4),
-                outputFilePath = json.optString("audioFilePath", "/data/recorded_audio.wav"),
+                audioFilePath = json.optString("audioFilePath", "/data/recorded_audio.wav"),
                 minBufferSize = json.optInt("minBufferSize", 960),
                 description = json.optString("description", "自定义配置")
             )
@@ -137,7 +139,7 @@ data class AudioConfig(
                                 put("audioFormat", getBitsPerSample(config.audioFormat))
                                 put("minBufferSize", config.minBufferSize)
                                 put("bufferMultiplier", config.bufferMultiplier)
-                                put("audioFilePath", config.outputFilePath)
+                                put("audioFilePath", config.audioFilePath)
                                 put("description", config.description)
                             })
                         }

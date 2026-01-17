@@ -139,6 +139,36 @@
       "bufferMultiplier": 4,
       "audioFilePath": "/data/recorded_ultrasound.wav",
       "description": "超声波录音 (需要系统权限)"
+    },
+    {
+      "audioSource": "MIC",
+      "sampleRate": 48000,
+      "channelCount": 4,
+      "audioFormat": 16,
+      "minBufferSize": 960,
+      "bufferMultiplier": 4,
+      "audioFilePath": "/data/recorded_48k_4ch_16bit.wav",
+      "description": "麦克风录音 (4声道)"
+    },
+    {
+      "audioSource": "UNPROCESSED",
+      "sampleRate": 48000,
+      "channelCount": 6,
+      "audioFormat": 16,
+      "minBufferSize": 960,
+      "bufferMultiplier": 4,
+      "audioFilePath": "/data/recorded_48k_6ch_16bit.wav",
+      "description": "未处理音频 (6声道)"
+    },
+    {
+      "audioSource": "MIC",
+      "sampleRate": 48000,
+      "channelCount": 8,
+      "audioFormat": 16,
+      "minBufferSize": 960,
+      "bufferMultiplier": 4,
+      "audioFilePath": "/data/recorded_48k_8ch_16bit.wav",
+      "description": "麦克风录音 (8声道)"
     }
   ]
 }
