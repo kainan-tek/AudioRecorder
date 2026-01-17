@@ -41,16 +41,36 @@
 
 ### 预设配置
 
-应用内置6种常用录音配置：
+应用内置19种录音配置，涵盖所有Android AudioSource类型：
 
+#### 基础音频源 (普通应用可用)
 | 配置名称 | 音频源 | 采样率 | 声道 | 位深度 | 用途 |
 |---------|--------|--------|------|--------|------|
+| 默认音频源 | DEFAULT | 44.1kHz | 立体声 | 16bit | 系统默认 |
 | 麦克风录音 (立体声) | MIC | 48kHz | 立体声 | 16bit | 通用录音 |
 | 麦克风录音 (单声道) | MIC | 48kHz | 单声道 | 16bit | 节省空间 |
-| 语音通话录音 | VOICE_COMMUNICATION | 16kHz | 单声道 | 16bit | 通话录音 |
+| 麦克风录音 (高保真) | MIC | 96kHz | 立体声 | 24bit | 高质量录音 |
+| 摄像头录音 | CAMCORDER | 48kHz | 立体声 | 16bit | 视频录制 |
 | 语音识别录音 | VOICE_RECOGNITION | 16kHz | 单声道 | 16bit | 语音识别 |
+| 语音通话录音 | VOICE_COMMUNICATION | 16kHz | 单声道 | 16bit | VoIP通话 |
+| 语音通话录音 (高质量) | VOICE_COMMUNICATION | 48kHz | 单声道 | 16bit | 高质量通话 |
+| 语音性能录音 | VOICE_PERFORMANCE | 48kHz | 单声道 | 16bit | 实时处理 |
 | 未处理音频 | UNPROCESSED | 48kHz | 立体声 | 16bit | 原始信号 |
-| 高保真录音 | MIC | 96kHz | 立体声 | 24bit | 高质量录音 |
+| 未处理音频 (高保真) | UNPROCESSED | 96kHz | 立体声 | 24bit | 高保真原始 |
+
+#### 系统级音频源 (需要特殊权限)
+| 配置名称 | 音频源 | 采样率 | 声道 | 位深度 | 用途 |
+|---------|--------|--------|------|--------|------|
+| 语音通话上行 | VOICE_UPLINK | 8kHz | 单声道 | 16bit | 通话发送 |
+| 语音通话下行 | VOICE_DOWNLINK | 8kHz | 单声道 | 16bit | 通话接收 |
+| 语音通话双向 | VOICE_CALL | 8kHz | 单声道 | 16bit | 完整通话 |
+| 远程子混音 | REMOTE_SUBMIX | 48kHz | 立体声 | 16bit | 内部音频流 |
+| 回声参考信号 | ECHO_REFERENCE | 48kHz | 立体声 | 16bit | 回声消除 |
+| 广播调谐器输出 | RADIO_TUNER | 48kHz | 立体声 | 16bit | 广播电台 |
+| 热词检测 | HOTWORD | 16kHz | 单声道 | 16bit | 语音唤醒 |
+| 超声波录音 | ULTRASOUND | 96kHz | 单声道 | 16bit | 超声波 |
+
+> **注意**: 系统级音频源需要相应的系统权限，普通第三方应用无法使用。
 
 ### 自定义配置
 
@@ -74,8 +94,8 @@
     {
       "audioSource": "MIC",
       "sampleRate": 48000,
-      "channelConfig": "STEREO",
-      "audioFormat": "PCM_16BIT",
+      "channelCount": 2,
+      "audioFormat": 16,
       "bufferMultiplier": 4,
       "outputFilePath": "/data/recorded_audio.wav",
       "minBufferSize": 960,

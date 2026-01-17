@@ -17,7 +17,8 @@
     <string name="status_stopping">停止中…</string>
     
     <!-- File Info -->
-    <string name="file_info">配置文件: /data/audio_configs.json\n录音文件保存位置:\n• /data/recorded_audio.wav (默认)\n\n支持多种录音格式:\n• 采样率: 8kHz - 192kHz\n• 声道: 单声道/立体声\n• 位深度: 8/16/24/32bit</string>
+    <string name="file_info">配置文件: /data/audio_configs.json\n录音文件保存位置:\n• /data/recorded_audio.wav (默认)\n\n支持多种录音格式:\n• 采样率: 8kHz - 192kHz\n• 声道: 单声道/立体声/多声道 (最大16声道)\n• 位深度: 8/16/24/32bit</string>
+    <string name="file_info_with_config">配置文件: /data/audio_configs.json\n录音文件保存位置:\n• /data/recorded_audio.wav (默认)\n\n%s\n\n支持多声道录音 (最大16声道)\n包括多通道专业音频录制</string>
     
     <!-- Configuration section -->
     <string name="recording_settings">录音设置</string>

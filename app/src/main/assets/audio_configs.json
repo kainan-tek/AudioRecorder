@@ -2,63 +2,143 @@
   "configs": [
     {
       "audioSource": "MIC",
-      "sampleRate": 48000,
-      "channelConfig": "STEREO",
-      "audioFormat": "PCM_16BIT",
-      "bufferMultiplier": 4,
-      "outputFilePath": "/data/recorded_mic_stereo.wav",
-      "minBufferSize": 960,
+      "sampleRate": 16000,
+      "channelCount": 2,
+      "audioFormat": 16,
+      "minBufferSize": 320,
+      "bufferMultiplier": 2,
+      "audioFilePath": "/data/recorded_16k_2ch_16bit.wav",
       "description": "麦克风录音 (立体声)"
     },
     {
-      "audioSource": "MIC",
-      "sampleRate": 48000,
-      "channelConfig": "MONO",
-      "audioFormat": "PCM_16BIT",
-      "bufferMultiplier": 4,
-      "outputFilePath": "/data/record_48k_1ch_16bit.wav",
-      "minBufferSize": 960,
-      "description": "麦克风录音 (单声道)"
+      "audioSource": "VOICE_UPLINK",
+      "sampleRate": 8000,
+      "channelCount": 1,
+      "audioFormat": 16,
+      "minBufferSize": 160,
+      "bufferMultiplier": 2,
+      "audioFilePath": "/data/recorded_8k_1ch_16bit.wav",
+      "description": "语音通话上行 (需要系统权限)"
     },
     {
-      "audioSource": "VOICE_COMMUNICATION",
-      "sampleRate": 16000,
-      "channelConfig": "MONO",
-      "audioFormat": "PCM_16BIT",
+      "audioSource": "VOICE_DOWNLINK",
+      "sampleRate": 8000,
+      "channelCount": 1,
+      "audioFormat": 16,
+      "minBufferSize": 160,
       "bufferMultiplier": 2,
-      "outputFilePath": "/data/recorded_voice_comm.wav",
+      "audioFilePath": "/data/recorded_8k_1ch_16bit.wav",
+      "description": "语音通话下行 (需要系统权限)"
+    },
+    {
+      "audioSource": "VOICE_CALL",
+      "sampleRate": 8000,
+      "channelCount": 1,
+      "audioFormat": 16,
+      "minBufferSize": 160,
+      "bufferMultiplier": 2,
+      "audioFilePath": "/data/recorded_8k_1ch_16bit.wav",
+      "description": "语音通话双向 (需要系统权限)"
+    },
+    {
+      "audioSource": "CAMCORDER",
+      "sampleRate": 16000,
+      "channelCount": 2,
+      "audioFormat": 16,
       "minBufferSize": 320,
-      "description": "语音通话录音"
+      "bufferMultiplier": 2,
+      "audioFilePath": "/data/recorded_16k_2ch_16bit.wav",
+      "description": "摄像头录音 (视频录制优化)"
     },
     {
       "audioSource": "VOICE_RECOGNITION",
       "sampleRate": 16000,
-      "channelConfig": "MONO",
-      "audioFormat": "PCM_16BIT",
-      "bufferMultiplier": 2,
-      "outputFilePath": "/data/recorded_voice_recog.wav",
+      "channelCount": 2,
+      "audioFormat": 16,
       "minBufferSize": 320,
-      "description": "语音识别录音"
+      "bufferMultiplier": 2,
+      "audioFilePath": "/data/recorded_16k_2ch_16bit.wav",
+      "description": "语音识别录音 (16kHz立体声)"
+    },
+    {
+      "audioSource": "VOICE_COMMUNICATION",
+      "sampleRate": 16000,
+      "channelCount": 2,
+      "audioFormat": 16,
+      "minBufferSize": 320,
+      "bufferMultiplier": 2,
+      "audioFilePath": "/data/recorded_16k_2ch_16bit.wav",
+      "description": "语音通话录音 (VoIP优化)"
+    },
+    {
+      "audioSource": "REMOTE_SUBMIX",
+      "sampleRate": 16000,
+      "channelCount": 2,
+      "audioFormat": 16,
+      "minBufferSize": 320,
+      "bufferMultiplier": 2,
+      "audioFilePath": "/data/recorded_16k_2ch_16bit.wav",
+      "description": "远程子混音 (需要系统权限)"
     },
     {
       "audioSource": "UNPROCESSED",
       "sampleRate": 48000,
-      "channelConfig": "STEREO",
-      "audioFormat": "PCM_16BIT",
+      "channelCount": 2,
+      "audioFormat": 16,
+      "minBufferSize": 960,
       "bufferMultiplier": 2,
-      "outputFilePath": "/data/recorded_unprocessed.wav",
-      "minBufferSize": 480,
+      "audioFilePath": "/data/recorded_48k_2ch_16bit.wav",
       "description": "未处理音频 (原始信号)"
     },
     {
-      "audioSource": "MIC",
+      "audioSource": "VOICE_PERFORMANCE",
+      "sampleRate": 48000,
+      "channelCount": 1,
+      "audioFormat": 16,
+      "minBufferSize": 480,
+      "bufferMultiplier": 1,
+      "audioFilePath": "/data/recorded_48k_1ch_16bit.wav",
+      "description": "语音性能录音 (实时处理/卡拉OK)"
+    },
+    {
+      "audioSource": "ECHO_REFERENCE",
+      "sampleRate": 48000,
+      "channelCount": 2,
+      "audioFormat": 16,
+      "minBufferSize": 960,
+      "bufferMultiplier": 2,
+      "audioFilePath": "/data/recorded_48k_2ch_16bit.wav",
+      "description": "回声参考信号 (需要系统权限)"
+    },
+    {
+      "audioSource": "RADIO_TUNER",
+      "sampleRate": 48000,
+      "channelCount": 2,
+      "audioFormat": 16,
+      "minBufferSize": 960,
+      "bufferMultiplier": 2,
+      "audioFilePath": "/data/recorded_48k_2ch_16bit.wav",
+      "description": "广播调谐器输出 (需要系统权限)"
+    },
+    {
+      "audioSource": "HOTWORD",
+      "sampleRate": 16000,
+      "channelCount": 1,
+      "audioFormat": 16,
+      "minBufferSize": 320,
+      "bufferMultiplier": 2,
+      "audioFilePath": "/data/recorded_16k_1ch_16bit.wav",
+      "description": "热词检测 (需要系统权限)"
+    },
+    {
+      "audioSource": "ULTRASOUND",
       "sampleRate": 96000,
-      "channelConfig": "STEREO",
-      "audioFormat": "PCM_24BIT",
-      "bufferMultiplier": 8,
-      "outputFilePath": "/data/recorded_hifi.wav",
-      "minBufferSize": 1920,
-      "description": "高保真录音 (96kHz 24bit)"
+      "channelCount": 1,
+      "audioFormat": 16,
+      "minBufferSize": 960,
+      "bufferMultiplier": 4,
+      "audioFilePath": "/data/recorded_ultrasound.wav",
+      "description": "超声波录音 (需要系统权限)"
     }
   ]
 }

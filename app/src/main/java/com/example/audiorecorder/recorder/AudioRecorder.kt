@@ -110,11 +110,11 @@ class AudioRecorder(private val context: Context) {
             ?: generateOutputFilePath()
         
         waveFile = WaveFile(outputPath)
-        val channelCount = getChannelCount(currentConfig.channelConfig)
+        val channelCount = currentConfig.channelCount // 直接使用配置中的声道数
         val bitsPerSample = getBitsPerSample(currentConfig.audioFormat)
         
         return if (waveFile!!.create(currentConfig.sampleRate, channelCount, bitsPerSample)) {
-            Log.d(TAG, "输出文件已创建: $outputPath")
+            Log.d(TAG, "输出文件已创建: $outputPath (${channelCount}声道)")
             true
         } else {
             handleError("无法创建输出文件: $outputPath")
@@ -172,7 +172,7 @@ class AudioRecorder(private val context: Context) {
 
     private fun validateAudioParameters(): Boolean {
         val sampleRate = currentConfig.sampleRate
-        val channelCount = getChannelCount(currentConfig.channelConfig)
+        val channelCount = currentConfig.channelCount // 直接使用配置中的声道数
         val bitsPerSample = getBitsPerSample(currentConfig.audioFormat)
         
         return when {
@@ -248,12 +248,6 @@ class AudioRecorder(private val context: Context) {
         releaseResources()
     }
 
-    private fun getChannelCount(channelConfig: Int) = when (channelConfig) {
-        AudioFormat.CHANNEL_IN_MONO -> 1
-        AudioFormat.CHANNEL_IN_STEREO -> 2
-        else -> 2
-    }
-
     private fun getBitsPerSample(audioFormat: Int) = when (audioFormat) {
         AudioFormat.ENCODING_PCM_8BIT -> 8
         AudioFormat.ENCODING_PCM_16BIT -> 16
@@ -266,7 +260,7 @@ class AudioRecorder(private val context: Context) {
     private fun generateOutputFilePath(): String {
         val dateFormat = SimpleDateFormat("yyyyMMdd_HHmmss")
         val dateTime = dateFormat.format(Date())
-        val channelCount = getChannelCount(currentConfig.channelConfig)
+        val channelCount = currentConfig.channelCount // 直接使用配置中的声道数
         val bitsPerSample = getBitsPerSample(currentConfig.audioFormat)
         val fileName = "recording_${currentConfig.sampleRate}Hz_${channelCount}ch_${bitsPerSample}bit_${dateTime}.wav"
         return File(context.filesDir, fileName).absolutePath

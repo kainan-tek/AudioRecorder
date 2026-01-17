@@ -21,8 +21,8 @@ AudioRecorder 应用包含一个完整的配置系统，支持通过外部JSON�
     {
       "audioSource": "MIC",
       "sampleRate": 48000,
-      "channelConfig": "STEREO",
-      "audioFormat": "PCM_16BIT",
+      "channelCount": 2,
+      "audioFormat": 16,
       "bufferMultiplier": 4,
       "outputFilePath": "/data/recorded_audio.wav",
       "minBufferSize": 960,
@@ -51,15 +51,33 @@ AudioRecorder 应用包含一个完整的配置系统，支持通过外部JSON�
 ## 配置参数详解
 
 ### 音频源 (audioSource)
-控制录音的音频输入源：
+控制录音的音频输入源，基于Android MediaRecorder.AudioSource常量：
 
-- `MIC` - 麦克风 (标准录音)
-- `VOICE_COMMUNICATION` - 语音通话 (通话录音)
-- `VOICE_RECOGNITION` - 语音识别 (语音识别优化)
-- `CAMCORDER` - 摄像头录音 (视频录制)
-- `UNPROCESSED` - 未处理音频 (原始信号)
-- `VOICE_PERFORMANCE` - 高性能语音 (低延迟)
-- `DEFAULT` - 默认音频源
+#### 基础音频源 (普通应用可用)
+- `DEFAULT` - 默认音频源，系统自动选择最合适的音频源
+- `MIC` - 麦克风音频源，标准录音应用的首选
+- `CAMCORDER` - 摄像头录音，针对视频录制优化，与摄像头方向一致
+- `VOICE_RECOGNITION` - 语音识别优化，针对语音识别应用调优
+- `VOICE_COMMUNICATION` - 语音通话优化，适用于VoIP等通话应用
+- `VOICE_PERFORMANCE` - 语音性能优化，用于实时处理和回放（如卡拉OK）
+- `UNPROCESSED` - 未处理音频，提供原始音频信号（如果设备支持）
+
+#### 系统级音频源 (需要特殊权限)
+- `VOICE_UPLINK` - 语音通话上行信号 (需要CAPTURE_AUDIO_OUTPUT权限)
+- `VOICE_DOWNLINK` - 语音通话下行信号 (需要CAPTURE_AUDIO_OUTPUT权限)
+- `VOICE_CALL` - 语音通话双向信号 (需要CAPTURE_AUDIO_OUTPUT权限)
+- `REMOTE_SUBMIX` - 远程子混音，用于捕获内部音频流的混音 (需要CAPTURE_AUDIO_OUTPUT权限)
+- `ECHO_REFERENCE` - 回声参考信号，用于回声消除 (需要CAPTURE_AUDIO_OUTPUT权限)
+- `RADIO_TUNER` - 广播调谐器输出 (需要CAPTURE_TUNER_AUDIO_INPUT权限)
+- `HOTWORD` - 热词检测，低优先级软件热词检测 (需要CAPTURE_AUDIO_HOTWORD权限)
+- `ULTRASOUND` - 超声波录音，如果设备支持 (需要ACCESS_ULTRASOUND权限)
+
+> **重要说明**: 
+> - **系统级音频源**需要系统级权限，普通第三方应用无法使用
+> - **UNPROCESSED** 音频源并非所有设备都支持，使用前建议检查设备兼容性
+> - **ULTRASOUND** 需要设备硬件支持超声波频率
+> - 不同音频源会应用不同的音频处理算法，选择合适的音频源对录音质量很重要
+> - 某些音频源可能在不同Android版本中有不同的行为表现
 
 ### 采样率 (sampleRate)
 控制音频采样频率，影响音质和文件大小：
@@ -70,19 +88,24 @@ AudioRecorder 应用包含一个完整的配置系统，支持通过外部JSON�
 - `48000` - 专业音频标准
 - `96000` - 高保真音频
 
-### 声道配置 (channelConfig)
-控制录音声道数：
+### 声道数量 (channelCount)
+控制录音声道数，支持1-16声道：
 
-- `MONO` - 单声道 (节省空间)
-- `STEREO` - 立体声 (标准录音)
+- `1` - 单声道 (节省空间)
+- `2` - 立体声 (标准录音)
+- `4` - 四声道录音
+- `6` - 5.1环绕声
+- `8` - 7.1环绕声
+- `12` - 7.1.4 Dolby Atmos
+- `16` - 最大专业多声道配置
 
 ### 音频格式 (audioFormat)
-控制音频位深度：
+控制音频位深度，使用数字表示：
 
-- `PCM_8BIT` - 8位PCM (最小文件)
-- `PCM_16BIT` - 16位PCM (标准质量)
-- `PCM_24BIT` - 24位PCM (高质量)
-- `PCM_32BIT` - 32位PCM (最高质量)
+- `8` - 8位PCM (最小文件)
+- `16` - 16位PCM (标准质量)
+- `24` - 24位PCM (高质量)
+- `32` - 32位PCM (最高质量)
 
 ### 缓冲区配置
 - `bufferMultiplier` - 缓冲区倍数 (1-8)
@@ -97,8 +120,8 @@ AudioRecorder 应用包含一个完整的配置系统，支持通过外部JSON�
 {
   "audioSource": "MIC",
   "sampleRate": 48000,
-  "channelConfig": "STEREO",
-  "audioFormat": "PCM_16BIT",
+  "channelCount": 2,
+  "audioFormat": 16,
   "bufferMultiplier": 4,
   "outputFilePath": "/data/standard_recording.wav",
   "minBufferSize": 960,
@@ -111,8 +134,8 @@ AudioRecorder 应用包含一个完整的配置系统，支持通过外部JSON�
 {
   "audioSource": "VOICE_RECOGNITION",
   "sampleRate": 16000,
-  "channelConfig": "MONO",
-  "audioFormat": "PCM_16BIT",
+  "channelCount": 1,
+  "audioFormat": 16,
   "bufferMultiplier": 2,
   "outputFilePath": "/data/voice_recognition.wav",
   "minBufferSize": 320,
@@ -125,12 +148,26 @@ AudioRecorder 应用包含一个完整的配置系统，支持通过外部JSON�
 {
   "audioSource": "MIC",
   "sampleRate": 96000,
-  "channelConfig": "STEREO",
-  "audioFormat": "PCM_24BIT",
+  "channelCount": 2,
+  "audioFormat": 24,
   "bufferMultiplier": 8,
   "outputFilePath": "/data/hifi_recording.wav",
   "minBufferSize": 1920,
   "description": "高保真录音"
+}
+```
+
+#### 多声道录音 (16声道)
+```json
+{
+  "audioSource": "MIC",
+  "sampleRate": 96000,
+  "channelCount": 16,
+  "audioFormat": 24,
+  "bufferMultiplier": 8,
+  "outputFilePath": "/data/multichannel_recording.wav",
+  "minBufferSize": 15360,
+  "description": "16声道专业录音"
 }
 ```
 
@@ -139,8 +176,8 @@ AudioRecorder 应用包含一个完整的配置系统，支持通过外部JSON�
 {
   "audioSource": "VOICE_PERFORMANCE",
   "sampleRate": 48000,
-  "channelConfig": "MONO",
-  "audioFormat": "PCM_16BIT",
+  "channelCount": 1,
+  "audioFormat": 16,
   "bufferMultiplier": 1,
   "outputFilePath": "/data/low_latency.wav",
   "minBufferSize": 240,
@@ -150,13 +187,30 @@ AudioRecorder 应用包含一个完整的配置系统，支持通过外部JSON�
 
 ## 预设配置场景
 
-应用包含6种预设配置，覆盖以下场景：
+应用包含19种预设配置，按音频源分类：
 
-**标准录音**: 麦克风立体声、麦克风单声道  
-**语音应用**: 语音通话、语音识别  
-**专业录音**: 未处理音频、高保真录音
+### 基础音频源 (普通应用可用)
+- **默认音频源** - 系统自动选择最合适的音频源
+- **麦克风录音** - 立体声、单声道、高保真三种配置
+- **摄像头录音** - 针对视频录制优化
+- **语音识别** - 16kHz单声道，针对语音识别优化
+- **语音通话** - VoIP优化，包含标准和高质量版本
+- **语音性能** - 实时处理优化，适用于卡拉OK等场景
+- **未处理音频** - 原始信号录音，包含标准和高保真版本
 
-详细配置参数请查看 `app/src/main/assets/audio_configs.json` 文件。
+### 系统级音频源 (需要特殊权限)
+- **语音通话上行** - 通话发送方向音频 (8kHz)
+- **语音通话下行** - 通话接收方向音频 (8kHz)
+- **语音通话双向** - 完整通话音频 (8kHz)
+- **远程子混音** - 内部音频流录音
+- **回声参考信号** - 用于回声消除的参考信号
+- **广播调谐器** - 广播电台音频输出
+- **热词检测** - 低优先级热词检测音频
+- **超声波录音** - 超声波频率录音 (96kHz)
+
+每种音频源都配置了最适合的采样率、声道和缓冲区参数。详细配置参数请查看 `app/src/main/assets/audio_configs.json` 文件。
+
+> **注意**: 系统级音频源需要相应的系统权限，普通第三方应用无法使用这些音频源。
 
 ## 配置文件管理
 

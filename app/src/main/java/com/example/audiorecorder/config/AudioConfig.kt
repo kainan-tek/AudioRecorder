@@ -12,18 +12,33 @@ import java.io.FileOutputStream
 
 /**
  * 音频录音配置数据类
- * 支持从JSON文件加载和管理录音参数
+ * 支持从JSON文件加载和管理录音参数，支持最大16声道录音
  */
 data class AudioConfig(
     val audioSource: Int = MediaRecorder.AudioSource.MIC,
     val sampleRate: Int = 48000,
-    val channelConfig: Int = AudioFormat.CHANNEL_IN_STEREO,
+    val channelCount: Int = 2, // 声道数量 (1-16)
     val audioFormat: Int = AudioFormat.ENCODING_PCM_16BIT,
     val bufferMultiplier: Int = 4,
     val outputFilePath: String = "/data/recorded_audio.wav",
     val minBufferSize: Int = 960,
     val description: String = "默认录音配置"
 ) {
+    // 根据声道数生成channelConfig
+    val channelConfig: Int
+        get() = when (channelCount) {
+            1 -> AudioFormat.CHANNEL_IN_MONO
+            2 -> AudioFormat.CHANNEL_IN_STEREO
+            in 3..16 -> {
+                // 对于3-16声道，使用位掩码构建声道配置
+                var channelMask = 0
+                for (i in 0 until channelCount) {
+                    channelMask = channelMask or (1 shl i)
+                }
+                channelMask
+            }
+            else -> AudioFormat.CHANNEL_IN_STEREO
+        }
     
     companion object {
         private const val TAG = "AudioConfig"
@@ -95,13 +110,16 @@ data class AudioConfig(
         }
 
         private fun parseAudioConfig(json: JSONObject): AudioConfig {
+            val channelCount = json.optInt("channelCount", 2)
+            val audioFormatBits = json.optInt("audioFormat", 16)
+            
             return AudioConfig(
                 audioSource = parseAudioSource(json.optString("audioSource", "MIC")),
                 sampleRate = json.optInt("sampleRate", 48000),
-                channelConfig = parseChannelConfig(json.optString("channelConfig", "STEREO")),
-                audioFormat = parseAudioFormat(json.optString("audioFormat", "PCM_16BIT")),
+                channelCount = channelCount,
+                audioFormat = parseAudioFormatFromBits(audioFormatBits),
                 bufferMultiplier = json.optInt("bufferMultiplier", 4),
-                outputFilePath = json.optString("outputFilePath", "/data/recorded_audio.wav"),
+                outputFilePath = json.optString("audioFilePath", "/data/recorded_audio.wav"),
                 minBufferSize = json.optInt("minBufferSize", 960),
                 description = json.optString("description", "自定义配置")
             )
@@ -115,11 +133,11 @@ data class AudioConfig(
                             put(JSONObject().apply {
                                 put("audioSource", getAudioSourceString(config.audioSource))
                                 put("sampleRate", config.sampleRate)
-                                put("channelConfig", getChannelConfigString(config.channelConfig))
-                                put("audioFormat", getAudioFormatString(config.audioFormat))
-                                put("bufferMultiplier", config.bufferMultiplier)
-                                put("outputFilePath", config.outputFilePath)
+                                put("channelCount", config.channelCount)
+                                put("audioFormat", getBitsPerSample(config.audioFormat))
                                 put("minBufferSize", config.minBufferSize)
+                                put("bufferMultiplier", config.bufferMultiplier)
+                                put("audioFilePath", config.outputFilePath)
                                 put("description", config.description)
                             })
                         }
@@ -139,51 +157,55 @@ data class AudioConfig(
         private fun parseAudioSource(source: String) = when (source.uppercase()) {
             "DEFAULT" -> MediaRecorder.AudioSource.DEFAULT
             "MIC" -> MediaRecorder.AudioSource.MIC
-            "VOICE_COMMUNICATION" -> MediaRecorder.AudioSource.VOICE_COMMUNICATION
-            "VOICE_RECOGNITION" -> MediaRecorder.AudioSource.VOICE_RECOGNITION
+            "VOICE_UPLINK" -> MediaRecorder.AudioSource.VOICE_UPLINK
+            "VOICE_DOWNLINK" -> MediaRecorder.AudioSource.VOICE_DOWNLINK
+            "VOICE_CALL" -> MediaRecorder.AudioSource.VOICE_CALL
             "CAMCORDER" -> MediaRecorder.AudioSource.CAMCORDER
+            "VOICE_RECOGNITION" -> MediaRecorder.AudioSource.VOICE_RECOGNITION
+            "VOICE_COMMUNICATION" -> MediaRecorder.AudioSource.VOICE_COMMUNICATION
+            "REMOTE_SUBMIX" -> MediaRecorder.AudioSource.REMOTE_SUBMIX
             "UNPROCESSED" -> MediaRecorder.AudioSource.UNPROCESSED
             "VOICE_PERFORMANCE" -> MediaRecorder.AudioSource.VOICE_PERFORMANCE
+            "ECHO_REFERENCE" -> 1997 // MediaRecorder.AudioSource.ECHO_REFERENCE
+            "RADIO_TUNER" -> 1998 // MediaRecorder.AudioSource.RADIO_TUNER
+            "HOTWORD" -> 1999 // MediaRecorder.AudioSource.HOTWORD
+            "ULTRASOUND" -> 2000 // MediaRecorder.AudioSource.ULTRASOUND
             else -> MediaRecorder.AudioSource.MIC
         }
 
-        private fun parseChannelConfig(config: String) = when (config.uppercase()) {
-            "MONO" -> AudioFormat.CHANNEL_IN_MONO
-            "STEREO" -> AudioFormat.CHANNEL_IN_STEREO
-            else -> AudioFormat.CHANNEL_IN_STEREO
+        private fun parseAudioFormatFromBits(bits: Int) = when (bits) {
+            8 -> AudioFormat.ENCODING_PCM_8BIT
+            16 -> AudioFormat.ENCODING_PCM_16BIT
+            24 -> AudioFormat.ENCODING_PCM_24BIT_PACKED
+            32 -> AudioFormat.ENCODING_PCM_32BIT
+            else -> AudioFormat.ENCODING_PCM_16BIT
         }
 
-        private fun parseAudioFormat(format: String) = when (format.uppercase()) {
-            "PCM_8BIT" -> AudioFormat.ENCODING_PCM_8BIT
-            "PCM_16BIT" -> AudioFormat.ENCODING_PCM_16BIT
-            "PCM_24BIT" -> AudioFormat.ENCODING_PCM_24BIT_PACKED
-            "PCM_32BIT" -> AudioFormat.ENCODING_PCM_32BIT
-            else -> AudioFormat.ENCODING_PCM_16BIT
+        private fun getBitsPerSample(audioFormat: Int) = when (audioFormat) {
+            AudioFormat.ENCODING_PCM_8BIT -> 8
+            AudioFormat.ENCODING_PCM_16BIT -> 16
+            AudioFormat.ENCODING_PCM_24BIT_PACKED -> 24
+            AudioFormat.ENCODING_PCM_32BIT -> 32
+            else -> 16
         }
 
         private fun getAudioSourceString(source: Int) = when (source) {
             MediaRecorder.AudioSource.DEFAULT -> "DEFAULT"
             MediaRecorder.AudioSource.MIC -> "MIC"
-            MediaRecorder.AudioSource.VOICE_COMMUNICATION -> "VOICE_COMMUNICATION"
-            MediaRecorder.AudioSource.VOICE_RECOGNITION -> "VOICE_RECOGNITION"
+            MediaRecorder.AudioSource.VOICE_UPLINK -> "VOICE_UPLINK"
+            MediaRecorder.AudioSource.VOICE_DOWNLINK -> "VOICE_DOWNLINK"
+            MediaRecorder.AudioSource.VOICE_CALL -> "VOICE_CALL"
             MediaRecorder.AudioSource.CAMCORDER -> "CAMCORDER"
+            MediaRecorder.AudioSource.VOICE_RECOGNITION -> "VOICE_RECOGNITION"
+            MediaRecorder.AudioSource.VOICE_COMMUNICATION -> "VOICE_COMMUNICATION"
+            MediaRecorder.AudioSource.REMOTE_SUBMIX -> "REMOTE_SUBMIX"
             MediaRecorder.AudioSource.UNPROCESSED -> "UNPROCESSED"
             MediaRecorder.AudioSource.VOICE_PERFORMANCE -> "VOICE_PERFORMANCE"
+            1997 -> "ECHO_REFERENCE" // MediaRecorder.AudioSource.ECHO_REFERENCE
+            1998 -> "RADIO_TUNER" // MediaRecorder.AudioSource.RADIO_TUNER
+            1999 -> "HOTWORD" // MediaRecorder.AudioSource.HOTWORD
+            2000 -> "ULTRASOUND" // MediaRecorder.AudioSource.ULTRASOUND
             else -> "MIC"
-        }
-
-        private fun getChannelConfigString(config: Int) = when (config) {
-            AudioFormat.CHANNEL_IN_MONO -> "MONO"
-            AudioFormat.CHANNEL_IN_STEREO -> "STEREO"
-            else -> "STEREO"
-        }
-
-        private fun getAudioFormatString(format: Int) = when (format) {
-            AudioFormat.ENCODING_PCM_8BIT -> "PCM_8BIT"
-            AudioFormat.ENCODING_PCM_16BIT -> "PCM_16BIT"
-            AudioFormat.ENCODING_PCM_24BIT_PACKED -> "PCM_24BIT"
-            AudioFormat.ENCODING_PCM_32BIT -> "PCM_32BIT"
-            else -> "PCM_16BIT"
         }
     }
 }

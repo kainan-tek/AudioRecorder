@@ -3,6 +3,7 @@ package com.example.audiorecorder
 import android.Manifest
 import android.app.AlertDialog
 import android.content.pm.PackageManager
+import android.media.AudioFormat
 import android.os.Bundle
 import android.widget.TextView
 import android.widget.Toast
@@ -33,10 +34,10 @@ import com.google.android.material.button.MaterialButton
  *     {
  *       "audioSource": "MIC",
  *       "sampleRate": 48000,
- *       "channelConfig": "STEREO",
- *       "audioFormat": "PCM_16BIT",
+ *       "channelCount": 2,
+ *       "audioFormat": 16,
  *       "bufferMultiplier": 4,
- *       "outputFilePath": "/data/recorded_audio.wav",
+ *       "audioFilePath": "/data/recorded_audio.wav",
  *       "minBufferSize": 960,
  *       "description": "自定义配置名称"
  *     }
@@ -96,6 +97,21 @@ class MainActivity : AppCompatActivity() {
         viewModel.currentConfig.observe(this) { config ->
             config?.let { 
                 configButton.text = getString(R.string.audio_config_format, it.description)
+                // 更新文件信息显示，包含声道数信息
+                val channelText = when(it.channelCount) {
+                    1 -> getString(R.string.channel_mono)
+                    2 -> getString(R.string.channel_stereo)
+                    else -> "${it.channelCount}声道"
+                }
+                val bitDepthText = when(it.audioFormat) {
+                    AudioFormat.ENCODING_PCM_8BIT -> "8"
+                    AudioFormat.ENCODING_PCM_16BIT -> "16"
+                    AudioFormat.ENCODING_PCM_24BIT_PACKED -> "24"
+                    AudioFormat.ENCODING_PCM_32BIT -> "32"
+                    else -> "16"
+                }
+                val configInfo = "当前配置: ${it.sampleRate}Hz | $channelText | ${bitDepthText}bit"
+                fileInfoText.text = getString(R.string.file_info_with_config, configInfo)
             }
         }
     }
