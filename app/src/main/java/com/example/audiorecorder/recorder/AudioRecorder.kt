@@ -3,234 +3,272 @@ package com.example.audiorecorder.recorder
 import android.Manifest
 import android.annotation.SuppressLint
 import android.content.Context
-import android.util.Log
-import java.io.File
+import android.content.pm.PackageManager
 import android.media.AudioFormat
 import android.media.AudioRecord
-import android.media.MediaRecorder
-import androidx.annotation.RequiresPermission
-import androidx.lifecycle.LiveData
-import androidx.lifecycle.MutableLiveData
+import android.util.Log
+import androidx.core.content.ContextCompat
+import com.example.audiorecorder.config.AudioConfig
 import com.example.audiorecorder.model.WaveFile
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.Job
+import kotlinx.coroutines.cancel
+import kotlinx.coroutines.isActive
+import kotlinx.coroutines.launch
+import java.io.File
 import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.concurrent.atomic.AtomicBoolean
 
+enum class RecorderState { IDLE, RECORDING, ERROR }
+
 /**
- * 录音器状态枚举
+ * 音频录音器核心类
+ * 支持配置化录音参数
  */
-enum class RecorderState {
-    IDLE,      // 空闲状态
-    RECORDING, // 录音中
-    PAUSED,    // 暂停状态
-    ERROR      // 错误状态
-}
-
 class AudioRecorder(private val context: Context) {
+    
     companion object {
-        private const val LOG_TAG = "AudioRecorder"
-        private const val MIN_BUF_MULTIPLIER = 2
-        private const val DEFAULT_SAMPLE_RATE = 48000
-        private const val DEFAULT_CHANNELS = 1
-        private const val DEFAULT_BITS_PER_SAMPLE = 16
-        
-        // 自定义多通道配置常量
-        const val CHANNEL_IN_10 = 4092 // 0xFFC
-        const val CHANNEL_IN_12 = 16380 // 0x3FFC
-        const val CHANNEL_IN_14 = 65532 // 0xFFFC
-        const val CHANNEL_IN_16 = 262140 // 0x3FFFC
+        private const val TAG = "AudioRecorder"
     }
-
-    private var audioSource = MediaRecorder.AudioSource.MIC
-    private var sampleRate = DEFAULT_SAMPLE_RATE
-    private var channels = DEFAULT_CHANNELS
-    private var bitsPerSample = DEFAULT_BITS_PER_SAMPLE
-    private var minBufSize = 0
-    private var totalBytesRead = 0
-    private var audioRecordFile: String = "/data/record_48k_1ch_16bit.wav"
 
     private var audioRecord: AudioRecord? = null
     private var waveFile: WaveFile? = null
-    private var recordingThread: Thread? = null
     private val isRecording = AtomicBoolean(false)
-    
-    private val _recorderState = MutableLiveData(RecorderState.IDLE)
-    val recorderState: LiveData<RecorderState> = _recorderState
-    
-    private val _errorMessage = MutableLiveData<String>()
-    val errorMessage: LiveData<String> = _errorMessage
+    private var recordingJob: Job? = null
+    private val recordingScope = CoroutineScope(Dispatchers.IO)
+    private var currentConfig: AudioConfig = AudioConfig()
 
-    @RequiresPermission(Manifest.permission.RECORD_AUDIO)
-    fun startRecording(): Boolean {
+    interface RecordingListener {
+        fun onRecordingStarted()
+        fun onRecordingStopped()
+        fun onRecordingError(error: String)
+    }
+
+    private var listener: RecordingListener? = null
+
+    fun setRecordingListener(listener: RecordingListener) {
+        this.listener = listener
+    }
+    
+    fun setAudioConfig(config: AudioConfig) {
         if (isRecording.get()) {
-            Log.d(LOG_TAG, "Already recording, ignoring start request")
+            Log.w(TAG, "录音中无法更改配置")
+            return
+        }
+        currentConfig = config
+        Log.i(TAG, "配置已更新: ${config.description}")
+    }
+
+    fun startRecording(): Boolean {
+        // 显式检查录音权限
+        if (ContextCompat.checkSelfPermission(context, Manifest.permission.RECORD_AUDIO) 
+            != PackageManager.PERMISSION_GRANTED) {
+            handleError("录音权限未授予")
             return false
         }
+        
+        if (isRecording.get()) {
+            stopRecording()
+        }
 
-        try {
-            Log.d(LOG_TAG, "Starting recording with: sampleRate=$sampleRate, channels=$channels, bitsPerSample=$bitsPerSample")
-            val outputFilePath = audioRecordFile.ifEmpty { generateOutputFilePath() }
-            Log.d(LOG_TAG, "Output file path: $outputFilePath")
-            
-            waveFile = WaveFile(outputFilePath)
-            if (waveFile?.create(sampleRate, channels, bitsPerSample) != true) {
-                val file = File(outputFilePath)
-                val msg = if (file.exists()) "File exists but access is denied" else "File does not exist"
-                Log.e(LOG_TAG, "Failed to create WAV file: $msg")
-                _errorMessage.postValue(msg)
-                return false
-            }
-            Log.d(LOG_TAG, "WAV file created successfully")
-
-            val channelConfig = when (channels) {
-                1 -> AudioFormat.CHANNEL_IN_MONO
-                2 -> AudioFormat.CHANNEL_IN_STEREO
-                10 -> CHANNEL_IN_10
-                12 -> CHANNEL_IN_12
-                14 -> CHANNEL_IN_14
-                16 -> CHANNEL_IN_16
-                else -> {
-                    Log.e(LOG_TAG, "Unsupported channel count: $channels")
-                    _errorMessage.postValue("Unsupported channel count: $channels")
-                    return false
-                }
-            }
-                
-            val audioFormat = when (bitsPerSample) {
-                8 -> AudioFormat.ENCODING_PCM_8BIT
-                16 -> AudioFormat.ENCODING_PCM_16BIT
-                24 -> AudioFormat.ENCODING_PCM_24BIT_PACKED
-                32 -> AudioFormat.ENCODING_PCM_32BIT
-                else -> {
-                    Log.e(LOG_TAG, "Unsupported bit depth: $bitsPerSample")
-                    _errorMessage.postValue("Unsupported bit depth: $bitsPerSample")
-                    return false
-                }
-            }
-
-            minBufSize = AudioRecord.getMinBufferSize(sampleRate, channelConfig, audioFormat)
-            if (minBufSize == AudioRecord.ERROR_BAD_VALUE || minBufSize == AudioRecord.ERROR) {
-                Log.e(LOG_TAG, "Invalid audio parameters, getMinBufferSize returned error")
-                _errorMessage.postValue("Invalid audio parameters")
-                return false
-            }
-            Log.d(LOG_TAG, "Min buffer size: $minBufSize")
-
-            Log.d(LOG_TAG, "Creating AudioRecord instance with buffer size: ${minBufSize * MIN_BUF_MULTIPLIER}")
-            audioRecord = AudioRecord.Builder()
-                .setAudioSource(audioSource)
-                .setAudioFormat(
-                    AudioFormat.Builder()
-                        .setSampleRate(sampleRate)
-                        .setChannelMask(channelConfig)
-                        .setEncoding(audioFormat)
-                        .build()
-                )
-                .setBufferSizeInBytes(minBufSize * MIN_BUF_MULTIPLIER)
-                .build()
-
-            if (audioRecord?.state != AudioRecord.STATE_INITIALIZED) {
-                Log.e(LOG_TAG, "Failed to initialize AudioRecord")
-                _errorMessage.postValue("Failed to initialize AudioRecord")
-                return false
-            }
-            Log.d(LOG_TAG, "AudioRecord initialized successfully")
-
-            audioRecord?.startRecording()
-            isRecording.set(true)
-            _recorderState.postValue(RecorderState.RECORDING)
-            Log.i(LOG_TAG, "Recording started successfully")
-            
-            startRecordingThread()
-            
-            return true
-
+        return try {
+            if (createOutputFile() && initializeAudioRecord()) {
+                isRecording.set(true)
+                startRecordingLoop()
+                listener?.onRecordingStarted()
+                Log.i(TAG, "录音开始成功")
+                true
+            } else false
+        } catch (_: SecurityException) {
+            handleError("录音权限被拒绝")
+            false
         } catch (e: Exception) {
-            Log.e(LOG_TAG, "Error starting recording", e)
-            _errorMessage.postValue("Error starting recording: ${e.message}")
-            return false
+            handleError("录音初始化失败: ${e.message}")
+            false
         }
     }
 
-    fun stopRecording(): Boolean {
-        if (!isRecording.get()) {
-            Log.d(LOG_TAG, "Not recording, ignoring stop request")
-            return false
-        }
+    fun stopRecording() {
+        if (!isRecording.get()) return
 
-        try {
-            Log.d(LOG_TAG, "Stopping recording, total bytes read: $totalBytesRead")
-            isRecording.set(false)
-            
-            recordingThread?.join(1000)
-            recordingThread = null
-            Log.d(LOG_TAG, "Recording thread stopped")
-            
-            audioRecord?.stop()
-            audioRecord?.release()
-            audioRecord = null
-            Log.d(LOG_TAG, "AudioRecord released")
-            
-            waveFile?.close()
-            waveFile = null
-            Log.d(LOG_TAG, "WAV file closed")
-            
-            _recorderState.postValue(RecorderState.IDLE)
-            Log.i(LOG_TAG, "Recording stopped successfully")
-            
-            return true
-
-        } catch (e: Exception) {
-            Log.e(LOG_TAG, "Error stopping recording", e)
-            _errorMessage.postValue("Error stopping recording: ${e.message}")
-            return false
-        }
-    }
-
-    private fun startRecordingThread() {
-        recordingThread = Thread {
-            val buffer = ByteArray(minBufSize)
-            totalBytesRead = 0
-            
-            while (isRecording.get() && audioRecord != null) {
-                try {
-                    val bytesRead = audioRecord?.read(buffer, 0, buffer.size) ?: -1
-                    if (bytesRead > 0) {
-                        waveFile?.writeAudioData(buffer, 0, bytesRead)
-                        totalBytesRead += bytesRead
-                        // 每读取一定量数据记录一次，避免日志过多
-                        if (totalBytesRead % (minBufSize * 100) == 0) {
-                            Log.d(LOG_TAG, "Recording in progress, total read: ${totalBytesRead}bytes, ${totalBytesRead/1024/1024}MB")
-                        }
-                    } else if (bytesRead < 0) {
-                        Log.w(LOG_TAG, "AudioRecord read returned error code: $bytesRead")
-                        break
-                    }
-                } catch (e: Exception) {
-                    Log.e(LOG_TAG, "Recording error", e)
-                    _errorMessage.postValue("Recording error: ${e.message}")
-                    break
-                }
-            }
-        }
-        recordingThread?.start()
-        Log.d(LOG_TAG, "Recording thread started")
+        isRecording.set(false)
+        recordingJob?.cancel()
+        releaseResources()
+        listener?.onRecordingStopped()
+        Log.i(TAG, "录音已停止")
     }
 
     fun release() {
-        Log.d(LOG_TAG, "Releasing AudioRecorder resources")
         stopRecording()
+        recordingScope.cancel()
+    }
+
+    private fun createOutputFile(): Boolean {
+        val outputPath = currentConfig.outputFilePath.takeIf { it.isNotEmpty() } 
+            ?: generateOutputFilePath()
+        
+        waveFile = WaveFile(outputPath)
+        val channelCount = getChannelCount(currentConfig.channelConfig)
+        val bitsPerSample = getBitsPerSample(currentConfig.audioFormat)
+        
+        return if (waveFile!!.create(currentConfig.sampleRate, channelCount, bitsPerSample)) {
+            Log.d(TAG, "输出文件已创建: $outputPath")
+            true
+        } else {
+            handleError("无法创建输出文件: $outputPath")
+            false
+        }
+    }
+
+    private fun initializeAudioRecord(): Boolean {
+        return try {
+            if (!validateAudioParameters()) return false
+
+            val minBufferSize = AudioRecord.getMinBufferSize(
+                currentConfig.sampleRate, 
+                currentConfig.channelConfig, 
+                currentConfig.audioFormat
+            )
+            
+            if (minBufferSize <= 0) {
+                handleError("不支持的音频参数组合")
+                return false
+            }
+            
+            val bufferSize = maxOf(
+                minBufferSize * currentConfig.bufferMultiplier, 
+                currentConfig.minBufferSize
+            )
+
+            audioRecord = AudioRecord.Builder()
+                .setAudioSource(currentConfig.audioSource)
+                .setAudioFormat(
+                    AudioFormat.Builder()
+                        .setSampleRate(currentConfig.sampleRate)
+                        .setChannelMask(currentConfig.channelConfig)
+                        .setEncoding(currentConfig.audioFormat)
+                        .build()
+                )
+                .setBufferSizeInBytes(bufferSize)
+                .build()
+
+            if (audioRecord?.state != AudioRecord.STATE_INITIALIZED) {
+                handleError("AudioRecord初始化失败")
+                return false
+            }
+
+            Log.i(TAG, "AudioRecord初始化成功 - ${currentConfig.description}")
+            true
+        } catch (_: SecurityException) {
+            handleError("录音权限被拒绝")
+            false
+        } catch (e: Exception) {
+            handleError("AudioRecord创建失败: ${e.message}")
+            false
+        }
+    }
+
+    private fun validateAudioParameters(): Boolean {
+        val sampleRate = currentConfig.sampleRate
+        val channelCount = getChannelCount(currentConfig.channelConfig)
+        val bitsPerSample = getBitsPerSample(currentConfig.audioFormat)
+        
+        return when {
+            sampleRate !in 8000..192000 -> {
+                handleError("不支持的采样率: ${sampleRate}Hz")
+                false
+            }
+            channelCount !in 1..16 -> {
+                handleError("不支持的声道数: $channelCount")
+                false
+            }
+            bitsPerSample !in listOf(8, 16, 24, 32) -> {
+                handleError("不支持的位深度: ${bitsPerSample}bit")
+                false
+            }
+            else -> true
+        }
+    }
+
+    private fun startRecordingLoop() {
+        recordingJob = recordingScope.launch {
+            val bufferSize = 4096
+            val buffer = ByteArray(bufferSize)
+            var totalBytes = 0L
+            
+            try {
+                audioRecord?.startRecording()
+                Log.i(TAG, "开始录音 - ${currentConfig.description}")
+                
+                while (isActive && isRecording.get()) {
+                    val bytesRead = audioRecord?.read(buffer, 0, buffer.size) ?: -1
+                    
+                    if (bytesRead <= 0) break
+                    
+                    waveFile?.writeAudioData(buffer, 0, bytesRead)
+                    totalBytes += bytesRead
+                    
+                    // 每10MB输出一次进度
+                    if (totalBytes % (10 * 1024 * 1024) == 0L && totalBytes > 0) {
+                        val mbRecorded = totalBytes / (1024.0 * 1024.0)
+                        Log.d(TAG, "录音进度: ${String.format("%.1f", mbRecorded)}MB")
+                    }
+                }
+            } catch (_: SecurityException) {
+                if (isRecording.get()) {
+                    handleError("录音权限被拒绝")
+                }
+            } catch (e: Exception) {
+                if (isRecording.get()) {
+                    handleError("录音过程出错: ${e.message}")
+                }
+            }
+        }
+    }
+
+    private fun releaseResources() {
+        try {
+            audioRecord?.apply {
+                if (state == AudioRecord.STATE_INITIALIZED) stop()
+                release()
+            }
+            audioRecord = null
+            waveFile?.close()
+            waveFile = null
+        } catch (e: Exception) {
+            Log.e(TAG, "资源释放出错", e)
+        }
+    }
+
+    private fun handleError(message: String) {
+        Log.e(TAG, message)
+        listener?.onRecordingError(message)
+        releaseResources()
+    }
+
+    private fun getChannelCount(channelConfig: Int) = when (channelConfig) {
+        AudioFormat.CHANNEL_IN_MONO -> 1
+        AudioFormat.CHANNEL_IN_STEREO -> 2
+        else -> 2
+    }
+
+    private fun getBitsPerSample(audioFormat: Int) = when (audioFormat) {
+        AudioFormat.ENCODING_PCM_8BIT -> 8
+        AudioFormat.ENCODING_PCM_16BIT -> 16
+        AudioFormat.ENCODING_PCM_24BIT_PACKED -> 24
+        AudioFormat.ENCODING_PCM_32BIT -> 32
+        else -> 16
     }
     
-    /**
-     * 生成输出文件路径
-     */
     @SuppressLint("SimpleDateFormat")
     private fun generateOutputFilePath(): String {
-        val filesDir = context.filesDir
         val dateFormat = SimpleDateFormat("yyyyMMdd_HHmmss")
         val dateTime = dateFormat.format(Date())
-        val fileName = "recording_${sampleRate}Hz_${channels}ch_${bitsPerSample}bit_${dateTime}.wav"
-        return File(filesDir, fileName).absolutePath
+        val channelCount = getChannelCount(currentConfig.channelConfig)
+        val bitsPerSample = getBitsPerSample(currentConfig.audioFormat)
+        val fileName = "recording_${currentConfig.sampleRate}Hz_${channelCount}ch_${bitsPerSample}bit_${dateTime}.wav"
+        return File(context.filesDir, fileName).absolutePath
     }
 }

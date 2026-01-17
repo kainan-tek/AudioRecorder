@@ -1,16 +1,36 @@
 <resources>
     <string name="app_name">AudioRecorder</string>
-    <string name="button1">START</string>
-    <string name="button2">STOP</string>
+    <string name="app_title">音频录音器</string>
     
-    <!-- New strings -->
-    <string name="start_recording">START</string>
-    <string name="stop_recording">STOP</string>
-    <string name="resume_recording">Resume Recording</string>
-    <string name="ready_to_record">Ready to record</string>
-    <string name="recording">Recording…</string>
-    <string name="paused">Paused</string>
-    <string name="error_occurred">Error occurred</string>
-    <string name="permissions_required">Permissions required to record audio</string>
-    <string name="permissions_required_settings">Please enable microphone permission in device settings</string>
+    <!-- Button Labels -->
+    <string name="start_recording">录音</string>
+    <string name="stop_recording">停止</string>
+    <string name="select_config">配置: 默认配置</string>
+    <string name="audio_config_format">配置: %s</string>
+    
+    <!-- Status messages -->
+    <string name="ready_to_record">准备录音</string>
+    <string name="recording">正在录音…</string>
+    <string name="recording_stopped">录音已停止</string>
+    <string name="error_occurred">发生错误</string>
+    <string name="status_preparing">准备中…</string>
+    <string name="status_stopping">停止中…</string>
+    
+    <!-- File Info -->
+    <string name="file_info">配置文件: /data/audio_configs.json\n录音文件保存位置:\n• /data/recorded_audio.wav (默认)\n\n支持多种录音格式:\n• 采样率: 8kHz - 192kHz\n• 声道: 单声道/立体声\n• 位深度: 8/16/24/32bit</string>
+    
+    <!-- Configuration section -->
+    <string name="recording_settings">录音设置</string>
+    <string name="config_info_default">当前使用默认配置</string>
+    <string name="config_info_format">采样率: %1$dHz | 声道: %2$s | 位深: %3$sbit</string>
+    <string name="channel_mono">单声道</string>
+    <string name="channel_stereo">立体声</string>
+    
+    <!-- Permission messages -->
+    <string name="permission_granted">权限已授予</string>
+    <string name="permission_required">需要录音权限才能使用此功能</string>
+    <string name="error_permission_denied">权限被拒绝</string>
+    
+    <!-- Error messages -->
+    <string name="error_recording_failed">录音失败</string>
 </resources>

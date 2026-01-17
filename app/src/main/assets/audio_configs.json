@@ -1,0 +1,64 @@
+{
+  "configs": [
+    {
+      "audioSource": "MIC",
+      "sampleRate": 48000,
+      "channelConfig": "STEREO",
+      "audioFormat": "PCM_16BIT",
+      "bufferMultiplier": 4,
+      "outputFilePath": "/data/recorded_mic_stereo.wav",
+      "minBufferSize": 960,
+      "description": "麦克风录音 (立体声)"
+    },
+    {
+      "audioSource": "MIC",
+      "sampleRate": 48000,
+      "channelConfig": "MONO",
+      "audioFormat": "PCM_16BIT",
+      "bufferMultiplier": 4,
+      "outputFilePath": "/data/record_48k_1ch_16bit.wav",
+      "minBufferSize": 960,
+      "description": "麦克风录音 (单声道)"
+    },
+    {
+      "audioSource": "VOICE_COMMUNICATION",
+      "sampleRate": 16000,
+      "channelConfig": "MONO",
+      "audioFormat": "PCM_16BIT",
+      "bufferMultiplier": 2,
+      "outputFilePath": "/data/recorded_voice_comm.wav",
+      "minBufferSize": 320,
+      "description": "语音通话录音"
+    },
+    {
+      "audioSource": "VOICE_RECOGNITION",
+      "sampleRate": 16000,
+      "channelConfig": "MONO",
+      "audioFormat": "PCM_16BIT",
+      "bufferMultiplier": 2,
+      "outputFilePath": "/data/recorded_voice_recog.wav",
+      "minBufferSize": 320,
+      "description": "语音识别录音"
+    },
+    {
+      "audioSource": "UNPROCESSED",
+      "sampleRate": 48000,
+      "channelConfig": "STEREO",
+      "audioFormat": "PCM_16BIT",
+      "bufferMultiplier": 2,
+      "outputFilePath": "/data/recorded_unprocessed.wav",
+      "minBufferSize": 480,
+      "description": "未处理音频 (原始信号)"
+    },
+    {
+      "audioSource": "MIC",
+      "sampleRate": 96000,
+      "channelConfig": "STEREO",
+      "audioFormat": "PCM_24BIT",
+      "bufferMultiplier": 8,
+      "outputFilePath": "/data/recorded_hifi.wav",
+      "minBufferSize": 1920,
+      "description": "高保真录音 (96kHz 24bit)"
+    }
+  ]
+}
