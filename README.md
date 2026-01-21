@@ -226,8 +226,9 @@ adb push custom_config.json /data/audio_configs.json
 ## 📞 联系方式
 
 如有问题或建议，请通过以下方式联系：
-- 提交 GitHub Issue
-- 发送邮件至项目维护者
+
+- 提交Issue: [GitHub Issues](https://github.com/kainan-tek/AudioRecorder/issues)
+- 邮箱: kainanos@outlook.com
 
 ---
 
