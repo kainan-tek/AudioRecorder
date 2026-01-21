@@ -4,11 +4,8 @@ import android.content.Context
 import android.media.AudioFormat
 import android.media.MediaRecorder
 import android.util.Log
-import org.json.JSONArray
 import org.json.JSONObject
 import java.io.File
-import java.io.FileInputStream
-import java.io.FileOutputStream
 
 /**
  * 音频录音配置数据类
@@ -53,9 +50,7 @@ data class AudioConfig(
         fun loadConfigs(context: Context): List<AudioConfig> {
             return try {
                 loadFromExternalFile().takeIf { it.isNotEmpty() } 
-                    ?: loadFromAssets(context).also { configs ->
-                        if (configs.isNotEmpty()) createExternalConfigFile(configs)
-                    }
+                    ?: loadFromAssets(context)
             } catch (e: Exception) {
                 Log.e(TAG, "加载配置失败", e)
                 emptyList()
@@ -74,7 +69,7 @@ data class AudioConfig(
             val file = File(CONFIG_FILE_PATH)
             return if (file.exists()) {
                 try {
-                    val content = FileInputStream(file).use { it.readBytes().toString(Charsets.UTF_8) }
+                    val content = file.readText(Charsets.UTF_8)
                     parseJsonConfigs(content)
                 } catch (e: Exception) {
                     Log.e(TAG, "读取外部配置文件失败", e)
@@ -127,34 +122,6 @@ data class AudioConfig(
             )
         }
 
-        private fun createExternalConfigFile(configs: List<AudioConfig>) {
-            try {
-                val jsonObject = JSONObject().apply {
-                    put("configs", JSONArray().apply {
-                        configs.forEach { config ->
-                            put(JSONObject().apply {
-                                put("audioSource", getAudioSourceString(config.audioSource))
-                                put("sampleRate", config.sampleRate)
-                                put("channelCount", config.channelCount)
-                                put("audioFormat", getBitsPerSample(config.audioFormat))
-                                put("minBufferSize", config.minBufferSize)
-                                put("bufferMultiplier", config.bufferMultiplier)
-                                put("audioFilePath", config.audioFilePath)
-                                put("description", config.description)
-                            })
-                        }
-                    })
-                }
-
-                FileOutputStream(File(CONFIG_FILE_PATH)).use {
-                    it.write(jsonObject.toString(2).toByteArray(Charsets.UTF_8))
-                }
-                Log.i(TAG, "外部配置文件已创建: $CONFIG_FILE_PATH")
-            } catch (e: Exception) {
-                Log.e(TAG, "创建外部配置文件失败", e)
-            }
-        }
-
         // 解析和转换方法
         private fun parseAudioSource(source: String) = when (source.uppercase()) {
             "DEFAULT" -> MediaRecorder.AudioSource.DEFAULT
@@ -181,33 +148,6 @@ data class AudioConfig(
             24 -> AudioFormat.ENCODING_PCM_24BIT_PACKED
             32 -> AudioFormat.ENCODING_PCM_32BIT
             else -> AudioFormat.ENCODING_PCM_16BIT
-        }
-
-        private fun getBitsPerSample(audioFormat: Int) = when (audioFormat) {
-            AudioFormat.ENCODING_PCM_8BIT -> 8
-            AudioFormat.ENCODING_PCM_16BIT -> 16
-            AudioFormat.ENCODING_PCM_24BIT_PACKED -> 24
-            AudioFormat.ENCODING_PCM_32BIT -> 32
-            else -> 16
-        }
-
-        private fun getAudioSourceString(source: Int) = when (source) {
-            MediaRecorder.AudioSource.DEFAULT -> "DEFAULT"
-            MediaRecorder.AudioSource.MIC -> "MIC"
-            MediaRecorder.AudioSource.VOICE_UPLINK -> "VOICE_UPLINK"
-            MediaRecorder.AudioSource.VOICE_DOWNLINK -> "VOICE_DOWNLINK"
-            MediaRecorder.AudioSource.VOICE_CALL -> "VOICE_CALL"
-            MediaRecorder.AudioSource.CAMCORDER -> "CAMCORDER"
-            MediaRecorder.AudioSource.VOICE_RECOGNITION -> "VOICE_RECOGNITION"
-            MediaRecorder.AudioSource.VOICE_COMMUNICATION -> "VOICE_COMMUNICATION"
-            MediaRecorder.AudioSource.REMOTE_SUBMIX -> "REMOTE_SUBMIX"
-            MediaRecorder.AudioSource.UNPROCESSED -> "UNPROCESSED"
-            MediaRecorder.AudioSource.VOICE_PERFORMANCE -> "VOICE_PERFORMANCE"
-            1997 -> "ECHO_REFERENCE" // MediaRecorder.AudioSource.ECHO_REFERENCE
-            1998 -> "RADIO_TUNER" // MediaRecorder.AudioSource.RADIO_TUNER
-            1999 -> "HOTWORD" // MediaRecorder.AudioSource.HOTWORD
-            2000 -> "ULTRASOUND" // MediaRecorder.AudioSource.ULTRASOUND
-            else -> "MIC"
         }
     }
 }

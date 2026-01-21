@@ -21,8 +21,8 @@ import com.google.android.material.button.MaterialButton
  * 
  * 使用说明:
  * 1. adb root && adb remount && adb shell setenforce 0
- * 2. 安装并运行应用 (首次运行会在/data/创建audio_configs.json)
- * 3. 修改 /data/audio_configs.json 文件来自定义配置
+ * 2. 将配置文件推送到设备: adb push audio_configs.json /data/
+ * 3. 安装并运行应用
  * 4. 在应用中点击"配置"按钮，选择"重新加载配置文件"来应用更改
  * 5. 录音文件默认保存到 /data/recorded_audio.wav
  * 
@@ -134,9 +134,6 @@ class MainActivity : AppCompatActivity() {
         }
     }
 
-    /**
-     * 显示配置选择对话框
-     */
     private fun showConfigSelectionDialog() {
         val configs = viewModel.getAllAudioConfigs()
         if (configs.isEmpty()) {
@@ -149,7 +146,7 @@ class MainActivity : AppCompatActivity() {
         }
         
         AlertDialog.Builder(this)
-            .setTitle("选择录音配置 (${configs.size} 个)")
+            .setTitle("选择录音配置")
             .setItems(items.toTypedArray()) { _, which ->
                 if (which == configs.size) {
                     viewModel.reloadConfigurations()

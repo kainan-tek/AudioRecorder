@@ -166,21 +166,15 @@ class WaveFile(private val filePath: String) {
 
     private fun updateWavHeader() {
         try {
-            val file = File(filePath)
-            if (!file.exists()) return
-            
-            RandomAccessFile(file, "rw").use { raf ->
+            RandomAccessFile(File(filePath), "rw").use { raf ->
                 val totalDataLength = totalAudioLength + WAV_HEADER_SIZE - 8
-
                 // 更新文件总大小
                 raf.seek(4)
                 raf.write(createLittleEndianInt(totalDataLength))
-
                 // 更新音频数据大小
                 raf.seek(40)
                 raf.write(createLittleEndianInt(totalAudioLength))
             }
-            
             Log.d(TAG, "WAV头部更新完成")
         } catch (e: IOException) {
             Log.w(TAG, "更新WAV头部失败", e)
