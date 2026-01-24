@@ -1,87 +1,65 @@
 <?xml version="1.0" encoding="utf-8"?>
 <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
-    xmlns:app="http://schemas.android.com/apk/res-auto"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
     android:orientation="vertical"
-    android:gravity="center"
-    android:padding="24dp"
-    android:background="@color/background">
+    android:padding="16dp">
 
-    <!-- App Title -->
-    <TextView
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:text="@string/app_title"
-        android:textSize="24sp"
-        android:textStyle="bold"
-        android:textColor="@color/primary_text"
-        android:layout_marginBottom="32dp" />
-
-    <!-- Status Display -->
     <TextView
         android:id="@+id/statusTextView"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:text="@string/ready_to_record"
+        android:text="Ready to Record"
         android:textSize="16sp"
-        android:textColor="@color/secondary_text"
         android:gravity="center"
         android:padding="16dp"
-        android:background="@color/card_background"
-        android:layout_marginBottom="24dp"
-        android:minHeight="48dp" />
+        android:background="@drawable/status_background"
+        android:layout_marginBottom="16dp" />
 
-    <!-- Control Buttons -->
+    <!-- Recording control button row -->
     <LinearLayout
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:orientation="horizontal"
-        android:gravity="center"
         android:layout_marginBottom="16dp">
 
-        <com.google.android.material.button.MaterialButton
-            android:id="@+id/startButton"
+        <Button
+            android:id="@+id/recordButton"
             android:layout_width="0dp"
-            android:layout_height="48dp"
+            android:layout_height="80dp"
             android:layout_weight="1"
             android:layout_marginEnd="8dp"
-            android:text="@string/start_recording"
-            android:backgroundTint="@color/record_button"
-            app:cornerRadius="24dp" />
+            android:text="Start Record"
+            android:textSize="18sp"
+            android:backgroundTint="#4CAF50" />
 
-        <com.google.android.material.button.MaterialButton
+        <Button
             android:id="@+id/stopButton"
             android:layout_width="0dp"
-            android:layout_height="48dp"
+            android:layout_height="80dp"
             android:layout_weight="1"
             android:layout_marginStart="8dp"
-            android:text="@string/stop_recording"
-            android:backgroundTint="@color/stop_button"
-            app:cornerRadius="24dp"
+            android:text="Stop Record"
+            android:textSize="18sp"
+            android:backgroundTint="#F44336"
             android:enabled="false" />
 
     </LinearLayout>
 
-    <!-- Config Button -->
-    <com.google.android.material.button.MaterialButton
+    <Button
         android:id="@+id/configButton"
-        style="@style/Widget.Material3.Button.OutlinedButton"
-        android:layout_width="match_parent"
-        android:layout_height="48dp"
-        android:text="@string/select_config"
-        app:cornerRadius="24dp" />
-
-    <!-- File Info -->
-    <TextView
-        android:id="@+id/fileInfoTextView"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:text="@string/file_info"
+        android:text="Recording Configuration"
+        android:layout_marginBottom="16dp" />
+
+    <TextView
+        android:id="@+id/recordingInfoTextView"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:text="Recording Information"
         android:textSize="12sp"
-        android:textColor="@color/hint_text"
-        android:gravity="center"
-        android:layout_marginTop="16dp"
+        android:background="@drawable/info_background"
         android:padding="12dp" />
 
 </LinearLayout>

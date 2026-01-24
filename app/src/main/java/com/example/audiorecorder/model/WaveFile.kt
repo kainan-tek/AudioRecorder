@@ -7,7 +7,7 @@ import java.io.IOException
 import java.io.RandomAccessFile
 
 /**
- * 简洁的WAV文件写入类
+ * Concise WAV file writing class
  */
 class WaveFile(private val filePath: String) {
     
@@ -22,7 +22,7 @@ class WaveFile(private val filePath: String) {
     private var isFileOpen = false
     private var totalAudioLength = 0
     
-    // 音频参数
+    // Audio parameters
     var sampleRate: Int = 0
         private set
     var channelCount: Int = 0
@@ -31,10 +31,10 @@ class WaveFile(private val filePath: String) {
         private set
 
     /**
-     * 创建WAV文件并写入文件头
+     * Create WAV file and write file header
      */
     fun create(sampleRate: Int, channelCount: Int, bitsPerSample: Int): Boolean {
-        Log.d(TAG, "创建WAV文件: $filePath")
+        Log.d(TAG, "Creating WAV file: $filePath")
         
         if (!validateParameters(sampleRate, channelCount, bitsPerSample)) {
             return false
@@ -45,28 +45,28 @@ class WaveFile(private val filePath: String) {
         this.bitsPerSample = bitsPerSample
         
         return try {
-            close() // 确保之前的资源已释放
+            close() // Ensure previous resources are released
             
             val file = File(filePath)
             file.parentFile?.mkdirs()
             
             fileOutputStream = FileOutputStream(file)
-            writeInitialWavHeader() // 写入初始头部，数据长度为0
+            writeInitialWavHeader() // Write initial header with data length 0
             
             isFileOpen = true
             totalAudioLength = 0
             
-            Log.i(TAG, "WAV文件创建成功: ${sampleRate}Hz, ${channelCount}ch, ${bitsPerSample}bit")
+            Log.i(TAG, "WAV file created successfully: ${sampleRate}Hz, ${channelCount}ch, ${bitsPerSample}bit")
             true
         } catch (e: IOException) {
-            Log.e(TAG, "创建文件失败: $filePath", e)
+            Log.e(TAG, "Failed to create file: $filePath", e)
             close()
             false
         }
     }
 
     /**
-     * 写入音频数据
+     * Write audio data
      */
     fun writeAudioData(audioData: ByteArray, offset: Int, length: Int): Boolean {
         if (!isFileOpen || fileOutputStream == null) {
@@ -74,7 +74,7 @@ class WaveFile(private val filePath: String) {
         }
         
         if (offset < 0 || length < 0 || offset + length > audioData.size) {
-            Log.w(TAG, "无效的写入参数")
+            Log.w(TAG, "Invalid write parameters")
             return false
         }
         
@@ -83,18 +83,18 @@ class WaveFile(private val filePath: String) {
             totalAudioLength += length
             true
         } catch (e: IOException) {
-            Log.e(TAG, "写入数据失败", e)
+            Log.e(TAG, "Failed to write data", e)
             close()
             false
         }
     }
 
     /**
-     * 关闭文件并更新WAV头信息
+     * Close file and update WAV header information
      */
     fun close(): Boolean {
         if (isFileOpen || fileOutputStream != null) {
-            Log.d(TAG, "关闭WAV文件，总长度: ${totalAudioLength}字节")
+            Log.d(TAG, "Closing WAV file, total length: $totalAudioLength bytes")
             
             try {
                 fileOutputStream?.close()
@@ -103,7 +103,7 @@ class WaveFile(private val filePath: String) {
                 }
                 return true
             } catch (e: IOException) {
-                Log.e(TAG, "关闭文件失败", e)
+                Log.e(TAG, "Failed to close file", e)
                 return false
             } finally {
                 fileOutputStream = null
@@ -115,21 +115,21 @@ class WaveFile(private val filePath: String) {
 
     private fun validateParameters(sampleRate: Int, channelCount: Int, bitsPerSample: Int): Boolean {
         if (sampleRate <= 0 || channelCount <= 0 || bitsPerSample <= 0) {
-            Log.e(TAG, "无效的音频参数: ${sampleRate}Hz, ${channelCount}ch, ${bitsPerSample}bit")
+            Log.e(TAG, "Invalid audio parameters: ${sampleRate}Hz, ${channelCount}ch, ${bitsPerSample}bit")
             return false
         }
         
         if (bitsPerSample !in arrayOf(8, 16, 24, 32)) {
-            Log.e(TAG, "不支持的位深度: ${bitsPerSample}bit")
+            Log.e(TAG, "Unsupported bit depth: ${bitsPerSample}bit")
             return false
         }
         
         if (sampleRate !in 8000..192000) {
-            Log.w(TAG, "采样率超出常见范围: ${sampleRate}Hz")
+            Log.w(TAG, "Sample rate outside common range: ${sampleRate}Hz")
         }
         
         if (channelCount > 16) {
-            Log.e(TAG, "声道数超出支持范围: ${channelCount}声道")
+            Log.e(TAG, "Channel count exceeds supported range: $channelCount channels")
             return false
         }
         
@@ -141,9 +141,9 @@ class WaveFile(private val filePath: String) {
         val blockAlign = channelCount * bitsPerSample / 8
 
         val header = ByteArray(WAV_HEADER_SIZE).apply {
-            // RIFF header - 初始时数据长度设为0，稍后更新
+            // RIFF header - initially set data length to 0, update later
             "RIFF".toByteArray().copyInto(this, 0)
-            writeLittleEndianInt(WAV_HEADER_SIZE - 8, 4) // 临时值，稍后更新
+            writeLittleEndianInt(WAV_HEADER_SIZE - 8, 4) // Temporary value, update later
             "WAVE".toByteArray().copyInto(this, 8)
 
             // fmt subchunk
@@ -156,9 +156,9 @@ class WaveFile(private val filePath: String) {
             writeLittleEndianShort(blockAlign, 32)
             writeLittleEndianShort(bitsPerSample, 34)
 
-            // data subchunk - 初始时数据长度设为0，稍后更新
+            // data subchunk - initially set data length to 0, update later
             "data".toByteArray().copyInto(this, 36)
-            writeLittleEndianInt(0, 40) // 数据长度，稍后更新
+            writeLittleEndianInt(0, 40) // Data length, update later
         }
         
         fileOutputStream?.write(header)
@@ -168,20 +168,20 @@ class WaveFile(private val filePath: String) {
         try {
             RandomAccessFile(File(filePath), "rw").use { raf ->
                 val totalDataLength = totalAudioLength + WAV_HEADER_SIZE - 8
-                // 更新文件总大小
+                // Update total file size
                 raf.seek(4)
                 raf.write(createLittleEndianInt(totalDataLength))
-                // 更新音频数据大小
+                // Update audio data size
                 raf.seek(40)
                 raf.write(createLittleEndianInt(totalAudioLength))
             }
-            Log.d(TAG, "WAV头部更新完成")
+            Log.d(TAG, "WAV header update completed")
         } catch (e: IOException) {
-            Log.w(TAG, "更新WAV头部失败", e)
+            Log.w(TAG, "Failed to update WAV header", e)
         }
     }
 
-    // 辅助方法
+    // Helper methods
     private fun ByteArray.writeLittleEndianInt(value: Int, offset: Int) {
         this[offset] = (value and 0xFF).toByte()
         this[offset + 1] = ((value shr 8) and 0xFF).toByte()

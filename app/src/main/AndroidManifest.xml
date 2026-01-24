@@ -3,18 +3,18 @@
     xmlns:tools="http://schemas.android.com/tools"
     package="com.example.audiorecorder">
 
-    <!-- 录音权限 - 应用核心功能必需 -->
+    <!-- Recording permission - Required for core app functionality -->
     <uses-permission android:name="android.permission.RECORD_AUDIO" />
     
-    <!-- 存储权限 - 用于保存录音文件 -->
-    <!-- Android 13 (API 33) 及以上版本 -->
+    <!-- Storage permissions - For saving recorded audio files -->
+    <!-- Android 13 (API 33) and above -->
     <uses-permission android:name="android.permission.READ_MEDIA_AUDIO" tools:targetApi="33" />
-    <!-- Android 12 (API 32) 及以下版本 -->
+    <!-- Android 12 (API 32) and below -->
     <uses-permission android:name="android.permission.READ_EXTERNAL_STORAGE" android:maxSdkVersion="32" />
     <uses-permission android:name="android.permission.WRITE_EXTERNAL_STORAGE" android:maxSdkVersion="28"
         tools:ignore="ScopedStorage" />
 
-    <!-- 声明应用需要麦克风功能 -->
+    <!-- Declare that the app requires microphone feature -->
     <uses-feature android:name="android.hardware.microphone" android:required="true" />
 
     <application

@@ -4,24 +4,25 @@ import android.content.Context
 import android.media.AudioFormat
 import android.media.MediaRecorder
 import android.util.Log
+import com.example.audiorecorder.utils.AudioConstants
 import org.json.JSONObject
 import java.io.File
 
 /**
- * 音频录音配置数据类
- * 支持从JSON文件加载和管理录音参数，支持最大16声道录音
+ * Audio recording configuration data class
+ * Supports loading and managing recording parameters from JSON files, supports up to 16-channel recording
  */
 data class AudioConfig(
     val audioSource: Int = MediaRecorder.AudioSource.MIC,
     val sampleRate: Int = 48000,
-    val channelCount: Int = 2, // 声道数量 (1-16)
+    val channelCount: Int = 2, // Channel count (1-16)
     val audioFormat: Int = AudioFormat.ENCODING_PCM_16BIT,
     val bufferMultiplier: Int = 4,
-    val audioFilePath: String = "/data/recorded_audio.wav",
+    val audioFilePath: String = AudioConstants.DEFAULT_AUDIO_FILE,
     val minBufferSize: Int = 960,
-    val description: String = "默认录音配置"
+    val description: String = "Default recording configuration"
 ) {
-    // 根据声道数生成channelMask
+    // Generate channelMask based on channel count
     val channelMask: Int
         get() = when (channelCount) {
             1 -> AudioFormat.CHANNEL_IN_MONO
@@ -29,7 +30,7 @@ data class AudioConfig(
             // 4 -> AudioFormat.CHANNEL_IN_2POINT0POINT2
             // 6 -> AudioFormat.CHANNEL_IN_5POINT1
             in 3..16 -> {
-                // 对于其他多声道，使用位掩码构建声道配置
+                // For other multi-channel configurations, use bitmask to build channel configuration
                 var mask = 0
                 for (i in 0 until channelCount) {
                     mask = mask or (1 shl i)
@@ -41,27 +42,27 @@ data class AudioConfig(
     
     companion object {
         private const val TAG = "AudioConfig"
-        private const val CONFIG_FILE_PATH = "/data/audio_configs.json"
-        private const val ASSETS_CONFIG_FILE = "audio_configs.json"
+        private const val CONFIG_FILE_PATH = AudioConstants.EXTERNAL_CONFIG_PATH
+        private const val ASSETS_CONFIG_FILE = AudioConstants.ASSETS_CONFIG_FILE
 
         /**
-         * 加载配置文件
+         * Load configuration file
          */
         fun loadConfigs(context: Context): List<AudioConfig> {
             return try {
                 loadFromExternalFile().takeIf { it.isNotEmpty() } 
                     ?: loadFromAssets(context)
             } catch (e: Exception) {
-                Log.e(TAG, "加载配置失败", e)
+                Log.e(TAG, "Failed to load configurations", e)
                 emptyList()
             }
         }
 
         /**
-         * 重新加载配置
+         * Reload configurations
          */
         fun reloadConfigs(context: Context): List<AudioConfig> {
-            Log.i(TAG, "重新加载配置文件")
+            Log.i(TAG, "Reloading configuration file")
             return loadConfigs(context)
         }
 
@@ -72,7 +73,7 @@ data class AudioConfig(
                     val content = file.readText(Charsets.UTF_8)
                     parseJsonConfigs(content)
                 } catch (e: Exception) {
-                    Log.e(TAG, "读取外部配置文件失败", e)
+                    Log.e(TAG, "Failed to read external configuration file", e)
                     emptyList()
                 }
             } else emptyList()
@@ -85,7 +86,7 @@ data class AudioConfig(
                 }
                 parseJsonConfigs(content)
             } catch (e: Exception) {
-                Log.e(TAG, "从assets加载配置失败", e)
+                Log.e(TAG, "Failed to load configuration from assets", e)
                 emptyList()
             }
         }
@@ -98,10 +99,10 @@ data class AudioConfig(
                 (0 until configsArray.length()).map { i ->
                     parseAudioConfig(configsArray.getJSONObject(i))
                 }.also {
-                    Log.i(TAG, "成功解析 ${it.size} 个配置")
+                    Log.i(TAG, "Successfully parsed ${it.size} configurations")
                 }
             } catch (e: Exception) {
-                Log.e(TAG, "解析JSON配置失败", e)
+                Log.e(TAG, "Failed to parse JSON configuration", e)
                 emptyList()
             }
         }
@@ -118,11 +119,11 @@ data class AudioConfig(
                 bufferMultiplier = json.optInt("bufferMultiplier", 4),
                 audioFilePath = json.optString("audioFilePath", "/data/recorded_audio.wav"),
                 minBufferSize = json.optInt("minBufferSize", 960),
-                description = json.optString("description", "自定义配置")
+                description = json.optString("description", "Custom configuration")
             )
         }
 
-        // 解析和转换方法
+        // Parsing and conversion methods
         private fun parseAudioSource(source: String) = when (source.uppercase()) {
             "DEFAULT" -> MediaRecorder.AudioSource.DEFAULT
             "MIC" -> MediaRecorder.AudioSource.MIC

@@ -1,34 +1,39 @@
 package com.example.audiorecorder
 
 import android.Manifest
+import android.annotation.SuppressLint
 import android.app.AlertDialog
 import android.content.pm.PackageManager
-import android.media.AudioFormat
 import android.os.Bundle
+import android.util.Log
 import android.widget.TextView
 import android.widget.Toast
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.app.ActivityCompat
 import androidx.core.content.ContextCompat
 import androidx.lifecycle.ViewModelProvider
+import com.example.audiorecorder.config.AudioConfig
 import com.example.audiorecorder.recorder.RecorderState
 import com.example.audiorecorder.viewmodel.RecorderViewModel
-import com.google.android.material.button.MaterialButton
+import com.example.audiorecorder.utils.audioSourceToString
+import com.example.audiorecorder.utils.audioFormatToString
+import com.example.audiorecorder.utils.channelCountToString
+import android.widget.Button
 
 /**
- * 简洁的音频录音器主界面
- * 支持从外部JSON文件加载音频配置，方便测试不同场景
+ * Concise audio recorder main interface
+ * Supports loading audio configurations from external JSON files for convenient testing of different scenarios
  * 
- * 使用说明:
+ * Usage instructions:
  * 1. adb root && adb remount && adb shell setenforce 0
- * 2. 将配置文件推送到设备: adb push audio_configs.json /data/
- * 3. 安装并运行应用
- * 4. 在应用中点击"配置"按钮，选择"重新加载配置文件"来应用更改
- * 5. 录音文件默认保存到 /data/recorded_audio.wav
+ * 2. Push configuration file to device: adb push audio_recorder_configs.json /data/
+ * 3. Install and run the application
+ * 4. In the app, click the "Configuration" button and select "Reload configuration file" to apply changes
+ * 5. Recording files are saved to /data/recorded_audio.wav by default
  * 
- * 系统要求: Android 13 (API 33+)
+ * System requirements: Android 13 (API 33+)
  * 
- * JSON配置文件格式:
+ * JSON configuration file format:
  * {
  *   "configs": [
  *     {
@@ -39,7 +44,7 @@ import com.google.android.material.button.MaterialButton
  *       "bufferMultiplier": 4,
  *       "audioFilePath": "/data/recorded_audio.wav",
  *       "minBufferSize": 960,
- *       "description": "自定义配置名称"
+ *       "description": "Custom configuration name"
  *     }
  *   ]
  * }
@@ -47,13 +52,14 @@ import com.google.android.material.button.MaterialButton
 class MainActivity : AppCompatActivity() {
     
     private lateinit var viewModel: RecorderViewModel
-    private lateinit var startButton: MaterialButton
-    private lateinit var stopButton: MaterialButton
-    private lateinit var configButton: MaterialButton
+    private lateinit var startButton: Button
+    private lateinit var stopButton: Button
+    private lateinit var configButton: Button
     private lateinit var statusText: TextView
     private lateinit var fileInfoText: TextView
 
     companion object {
+        private const val TAG = "MainActivity"
         private const val PERMISSION_REQUEST_CODE = 1001
     }
 
@@ -68,50 +74,37 @@ class MainActivity : AppCompatActivity() {
     }
 
     private fun initViews() {
-        startButton = findViewById(R.id.startButton)
+        startButton = findViewById(R.id.recordButton)
         stopButton = findViewById(R.id.stopButton)
         configButton = findViewById(R.id.configButton)
         statusText = findViewById(R.id.statusTextView)
-        fileInfoText = findViewById(R.id.fileInfoTextView)
+        fileInfoText = findViewById(R.id.recordingInfoTextView)
     }
 
     private fun initViewModel() {
         viewModel = ViewModelProvider(this)[RecorderViewModel::class.java]
         
-        // 观察录音状态
+        // Observe recording state
         viewModel.recorderState.observe(this) { state ->
             updateUI(state)
+            updateRecordingInfo()
         }
         
-        // 观察状态消息
+        // Observe status messages
         viewModel.statusMessage.observe(this) { message ->
             statusText.text = message
         }
         
-        // 观察错误消息
+        // Observe error messages
         viewModel.errorMessage.observe(this) { error -> 
-            error?.let { showToast("错误: $it") }
+            error?.let { handleError(it) }
         }
         
-        // 观察当前配置
+        // Observe current configuration
         viewModel.currentConfig.observe(this) { config ->
             config?.let { 
                 configButton.text = getString(R.string.audio_config_format, it.description)
-                // 更新文件信息显示，包含声道数信息
-                val channelText = when(it.channelCount) {
-                    1 -> getString(R.string.channel_mono)
-                    2 -> getString(R.string.channel_stereo)
-                    else -> "${it.channelCount}声道"
-                }
-                val bitDepthText = when(it.audioFormat) {
-                    AudioFormat.ENCODING_PCM_8BIT -> "8"
-                    AudioFormat.ENCODING_PCM_16BIT -> "16"
-                    AudioFormat.ENCODING_PCM_24BIT_PACKED -> "24"
-                    AudioFormat.ENCODING_PCM_32BIT -> "32"
-                    else -> "16"
-                }
-                val configInfo = "当前配置: ${it.sampleRate}Hz | $channelText | ${bitDepthText}bit"
-                fileInfoText.text = getString(R.string.file_info_with_config, configInfo)
+                updateRecordingInfo(it)
             }
         }
     }
@@ -133,31 +126,64 @@ class MainActivity : AppCompatActivity() {
             showConfigSelectionDialog() 
         }
     }
+    
+    /**
+     * Handle audio recording errors
+     */
+    private fun handleError(error: String) {
+        Log.e(TAG, "Audio recording error: $error")
+        showToast("Recording error: $error")
+        
+        // Reset recorder state
+        resetRecorderState()
+    }
+    
+    /**
+     * Reset recorder state
+     */
+    private fun resetRecorderState() {
+        startButton.isEnabled = true
+        stopButton.isEnabled = false
+        configButton.isEnabled = true
+        statusText.text = getString(R.string.status_ready)
+    }
 
     private fun showConfigSelectionDialog() {
         val configs = viewModel.getAllAudioConfigs()
         if (configs.isEmpty()) {
-            showToast("没有可用的配置")
+            showToast("No available configurations")
             return
         }
         
         val items = configs.map { it.description }.toMutableList().apply {
-            add("🔄 重新加载配置文件")
+            add("🔄 Reload configuration file")
         }
         
         AlertDialog.Builder(this)
-            .setTitle("选择录音配置")
+            .setTitle("Select Recording Configuration")
             .setItems(items.toTypedArray()) { _, which ->
                 if (which == configs.size) {
-                    viewModel.reloadConfigurations()
-                    showToast("正在重新加载配置...")
+                    reloadConfigurations()
                 } else {
                     viewModel.setAudioConfig(configs[which])
-                    showToast("已切换到: ${configs[which].description}")
+                    showToast("Switched to: ${configs[which].description}")
                 }
             }
-            .setNegativeButton("取消", null)
+            .setNegativeButton("Cancel", null)
             .show()
+    }
+    
+    /**
+     * Reload configuration file
+     */
+    private fun reloadConfigurations() {
+        try {
+            viewModel.reloadConfigurations()
+            showToast("Reloading configuration file...")
+        } catch (e: Exception) {
+            Log.e(TAG, "Failed to reload configurations", e)
+            showToast("Configuration reload failed: ${e.message}")
+        }
     }
 
     private fun updateUI(state: RecorderState) {
@@ -170,7 +196,7 @@ class MainActivity : AppCompatActivity() {
             RecorderState.RECORDING -> {
                 startButton.isEnabled = false
                 stopButton.isEnabled = true
-                configButton.isEnabled = false  // 录音时禁用配置更改
+                configButton.isEnabled = false  // Disable configuration changes during recording
             }
             RecorderState.ERROR -> {
                 startButton.isEnabled = true
@@ -208,10 +234,42 @@ class MainActivity : AppCompatActivity() {
 
     override fun onDestroy() {
         super.onDestroy()
-        viewModel.stopRecording()
+        try {
+            viewModel.stopRecording()
+            Log.d(TAG, "AudioRecorder resources released successfully")
+        } catch (e: Exception) {
+            Log.e(TAG, "Error releasing AudioRecorder resources", e)
+        }
+    }
+    
+    override fun onPause() {
+        super.onPause()
+        // Stop recording when app goes to background
+        if (viewModel.recorderState.value == RecorderState.RECORDING) {
+            viewModel.stopRecording()
+            Log.d(TAG, "Recording stopped due to app going to background")
+        }
     }
 
     private fun showToast(message: String) {
         Toast.makeText(this, message, Toast.LENGTH_SHORT).show()
+    }
+
+    @SuppressLint("SetTextI18n")
+    private fun updateRecordingInfo() {
+        viewModel.currentConfig.value?.let { config ->
+            updateRecordingInfo(config)
+        } ?: run {
+            fileInfoText.text = "Record information"
+        }
+    }
+    
+    @SuppressLint("SetTextI18n")
+    private fun updateRecordingInfo(config: AudioConfig) {
+        val configInfo = "Current configuration: ${config.description}\n" +
+                "Source: ${config.audioSource.audioSourceToString()}\n" +
+                "Parameters: ${config.sampleRate}Hz | ${config.channelCount.channelCountToString()} | ${config.audioFormat.audioFormatToString()}\n" +
+                "File: ${config.audioFilePath}"
+        fileInfoText.text = configInfo
     }
 }

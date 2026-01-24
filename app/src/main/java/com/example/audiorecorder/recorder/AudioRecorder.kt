@@ -10,6 +10,7 @@ import android.util.Log
 import androidx.core.content.ContextCompat
 import com.example.audiorecorder.config.AudioConfig
 import com.example.audiorecorder.model.WaveFile
+import com.example.audiorecorder.utils.AudioConstants
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
@@ -21,11 +22,18 @@ import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.concurrent.atomic.AtomicBoolean
 
-enum class RecorderState { IDLE, RECORDING, ERROR }
+/**
+ * Recording state enumeration
+ */
+enum class RecorderState {
+    IDLE,       // Idle state
+    RECORDING,  // Recording
+    ERROR       // Error state
+}
 
 /**
- * 音频录音器核心类
- * 支持配置化录音参数
+ * Audio recorder core class
+ * Supports configurable recording parameters
  */
 class AudioRecorder(private val context: Context) {
     
@@ -54,18 +62,18 @@ class AudioRecorder(private val context: Context) {
     
     fun setAudioConfig(config: AudioConfig) {
         if (isRecording.get()) {
-            Log.w(TAG, "录音中无法更改配置")
+            Log.w(TAG, "Cannot change configuration while recording")
             return
         }
         currentConfig = config
-        Log.i(TAG, "配置已更新: ${config.description}")
+        Log.i(TAG, "Configuration updated: ${config.description}")
     }
 
     fun startRecording(): Boolean {
-        // 显式检查录音权限
+        // Explicitly check recording permission
         if (ContextCompat.checkSelfPermission(context, Manifest.permission.RECORD_AUDIO) 
             != PackageManager.PERMISSION_GRANTED) {
-            handleError("录音权限未授予")
+            handleError("Recording permission not granted")
             return false
         }
         
@@ -78,14 +86,14 @@ class AudioRecorder(private val context: Context) {
                 isRecording.set(true)
                 startRecordingLoop()
                 listener?.onRecordingStarted()
-                Log.i(TAG, "录音开始成功")
+                Log.i(TAG, "Recording started successfully")
                 true
             } else false
         } catch (_: SecurityException) {
-            handleError("录音权限被拒绝")
+            handleError("Recording permission denied")
             false
         } catch (e: Exception) {
-            handleError("录音初始化失败: ${e.message}")
+            handleError("Recording initialization failed: ${e.message}")
             false
         }
     }
@@ -97,11 +105,12 @@ class AudioRecorder(private val context: Context) {
         recordingJob?.cancel()
         releaseResources()
         listener?.onRecordingStopped()
-        Log.i(TAG, "录音已停止")
+        Log.i(TAG, "Recording stopped")
     }
 
     fun release() {
         stopRecording()
+        listener = null  // Clear listener reference to prevent memory leaks
         recordingScope.cancel()
     }
 
@@ -110,14 +119,14 @@ class AudioRecorder(private val context: Context) {
             ?: generateOutputFilePath()
         
         waveFile = WaveFile(outputPath)
-        val channelCount = currentConfig.channelCount // 直接使用配置中的声道数
+        val channelCount = currentConfig.channelCount // Directly use channel count from configuration
         val bitsPerSample = getBitsPerSample(currentConfig.audioFormat)
         
         return if (waveFile!!.create(currentConfig.sampleRate, channelCount, bitsPerSample)) {
-            Log.d(TAG, "输出文件已创建: $outputPath (${channelCount}声道)")
+            Log.d(TAG, "Output file created: $outputPath (${channelCount} channels)")
             true
         } else {
-            handleError("无法创建输出文件: $outputPath")
+            handleError("Cannot create output file: $outputPath")
             false
         }
     }
@@ -133,7 +142,7 @@ class AudioRecorder(private val context: Context) {
             )
             
             if (minBufferSize <= 0) {
-                handleError("不支持的音频参数组合")
+                handleError("Unsupported audio parameter combination")
                 return false
             }
             
@@ -155,37 +164,37 @@ class AudioRecorder(private val context: Context) {
                 .build()
 
             if (audioRecord?.state != AudioRecord.STATE_INITIALIZED) {
-                handleError("AudioRecord初始化失败")
+                handleError("AudioRecord initialization failed")
                 return false
             }
 
-            Log.i(TAG, "AudioRecord初始化成功 - ${currentConfig.description}")
+            Log.i(TAG, "AudioRecord initialized successfully - ${currentConfig.description}")
             true
         } catch (_: SecurityException) {
-            handleError("录音权限被拒绝")
+            handleError("Recording permission denied")
             false
         } catch (e: Exception) {
-            handleError("AudioRecord创建失败: ${e.message}")
+            handleError("AudioRecord creation failed: ${e.message}")
             false
         }
     }
 
     private fun validateAudioParameters(): Boolean {
         val sampleRate = currentConfig.sampleRate
-        val channelCount = currentConfig.channelCount // 直接使用配置中的声道数
+        val channelCount = currentConfig.channelCount // Directly use channel count from configuration
         val bitsPerSample = getBitsPerSample(currentConfig.audioFormat)
         
         return when {
             sampleRate !in 8000..192000 -> {
-                handleError("不支持的采样率: ${sampleRate}Hz")
+                handleError("Unsupported sample rate: ${sampleRate}Hz")
                 false
             }
             channelCount !in 1..16 -> {
-                handleError("不支持的声道数: $channelCount")
+                handleError("Unsupported channel count: $channelCount")
                 false
             }
             bitsPerSample !in listOf(8, 16, 24, 32) -> {
-                handleError("不支持的位深度: ${bitsPerSample}bit")
+                handleError("Unsupported bit depth: ${bitsPerSample}bit")
                 false
             }
             else -> true
@@ -194,35 +203,45 @@ class AudioRecorder(private val context: Context) {
 
     private fun startRecordingLoop() {
         recordingJob = recordingScope.launch {
-            val bufferSize = 4096
-            val buffer = ByteArray(bufferSize)
+            // Adjust buffer size based on channel count
+            val baseBufferSize = when {
+                currentConfig.channelCount >= 12 -> AudioConstants.BUFFER_SIZE_12CH
+                currentConfig.channelCount >= 8 -> AudioConstants.BUFFER_SIZE_8CH
+                currentConfig.channelCount >= 6 -> AudioConstants.BUFFER_SIZE_6CH
+                else -> AudioConstants.BUFFER_SIZE_DEFAULT
+            }
+
+            val buffer = ByteArray(baseBufferSize)
             var totalBytes = 0L
             
             try {
                 audioRecord?.startRecording()
-                Log.i(TAG, "开始录音 - ${currentConfig.description}")
+                Log.i(TAG, "Started recording - ${currentConfig.description}, buffer: $baseBufferSize bytes")
                 
                 while (isActive && isRecording.get()) {
                     val bytesRead = audioRecord?.read(buffer, 0, buffer.size) ?: -1
                     
-                    if (bytesRead <= 0) break
+                    if (bytesRead <= 0) {
+                        Log.w(TAG, "AudioRecord read failed or reached end: $bytesRead")
+                        break
+                    }
                     
                     waveFile?.writeAudioData(buffer, 0, bytesRead)
                     totalBytes += bytesRead
                     
-                    // 每10MB输出一次进度
-                    if (totalBytes % (10 * 1024 * 1024) == 0L && totalBytes > 0) {
+                    // Periodically output recording progress
+                    if (totalBytes % AudioConstants.PROGRESS_LOG_INTERVAL == 0L && totalBytes > 0) {
                         val mbRecorded = totalBytes / (1024.0 * 1024.0)
-                        Log.d(TAG, "录音进度: ${String.format("%.1f", mbRecorded)}MB")
+                        Log.d(TAG, "Recording progress: ${String.format("%.1f", mbRecorded)}MB")
                     }
                 }
             } catch (_: SecurityException) {
                 if (isRecording.get()) {
-                    handleError("录音权限被拒绝")
+                    handleError("Recording permission denied")
                 }
             } catch (e: Exception) {
                 if (isRecording.get()) {
-                    handleError("录音过程出错: ${e.message}")
+                    handleError("Recording error: ${e.message}")
                 }
             }
         }
@@ -238,7 +257,7 @@ class AudioRecorder(private val context: Context) {
             waveFile?.close()
             waveFile = null
         } catch (e: Exception) {
-            Log.e(TAG, "资源释放出错", e)
+            Log.e(TAG, "Error releasing resources", e)
         }
     }
 
@@ -260,7 +279,7 @@ class AudioRecorder(private val context: Context) {
     private fun generateOutputFilePath(): String {
         val dateFormat = SimpleDateFormat("yyyyMMdd_HHmmss")
         val dateTime = dateFormat.format(Date())
-        val channelCount = currentConfig.channelCount // 直接使用配置中的声道数
+        val channelCount = currentConfig.channelCount // Directly use channel count from configuration
         val bitsPerSample = getBitsPerSample(currentConfig.audioFormat)
         val fileName = "recording_${currentConfig.sampleRate}Hz_${channelCount}ch_${bitsPerSample}bit_${dateTime}.wav"
         return File(context.filesDir, fileName).absolutePath

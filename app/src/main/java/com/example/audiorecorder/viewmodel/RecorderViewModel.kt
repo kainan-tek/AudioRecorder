@@ -13,7 +13,7 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 
 /**
- * 录音器ViewModel，管理UI状态和录音逻辑
+ * Recorder ViewModel, manages UI state and recording logic
  */
 class RecorderViewModel(application: Application) : AndroidViewModel(application) {
     
@@ -48,7 +48,7 @@ class RecorderViewModel(application: Application) : AndroidViewModel(application
                     val defaultConfig = configs[0]
                     audioRecorder.setAudioConfig(defaultConfig)
                     _currentConfig.value = defaultConfig
-                    _statusMessage.value = "配置已加载: ${configs.size} 个"
+                    _statusMessage.value = "Configuration loaded: ${configs.size} configs"
                 }
             }
         }
@@ -56,15 +56,37 @@ class RecorderViewModel(application: Application) : AndroidViewModel(application
 
     fun reloadConfigurations() {
         if (_recorderState.value == RecorderState.RECORDING) {
-            _statusMessage.value = "录音中无法重新加载配置"
+            _statusMessage.value = "Cannot reload configuration while recording"
+            _errorMessage.value = "Please stop recording before reloading configuration"
             return
         }
         
         viewModelScope.launch(Dispatchers.IO) {
-            val configs = AudioConfig.reloadConfigs(getApplication())
-            launch(Dispatchers.Main) {
-                _availableConfigs.value = configs
-                _statusMessage.value = "配置已重新加载: ${configs.size} 个"
+            try {
+                val configs = AudioConfig.reloadConfigs(getApplication())
+                launch(Dispatchers.Main) {
+                    if (configs.isNotEmpty()) {
+                        _availableConfigs.value = configs
+                        // If current configuration is not in new configuration list, set first one as default
+                        val currentConfigDescription = _currentConfig.value?.description
+                        val newCurrentConfig = configs.find { it.description == currentConfigDescription } 
+                            ?: configs[0]
+                        
+                        audioRecorder.setAudioConfig(newCurrentConfig)
+                        _currentConfig.value = newCurrentConfig
+                        _statusMessage.value = "Configuration reloaded successfully: ${configs.size} configs"
+                    } else {
+                        _statusMessage.value = "Configuration file is empty or format error"
+                        _errorMessage.value = "No valid recording configuration found"
+                    }
+                    // Clear error message
+                    _errorMessage.value = null
+                }
+            } catch (e: Exception) {
+                launch(Dispatchers.Main) {
+                    _statusMessage.value = "Configuration reload failed"
+                    _errorMessage.value = "Configuration reload failed: ${e.message}"
+                }
             }
         }
     }
@@ -88,7 +110,7 @@ class RecorderViewModel(application: Application) : AndroidViewModel(application
     fun setAudioConfig(config: AudioConfig) {
         audioRecorder.setAudioConfig(config)
         _currentConfig.value = config
-        _statusMessage.value = "配置已更新: ${config.description}"
+        _statusMessage.value = "Configuration updated: ${config.description}"
     }
     
     fun getAllAudioConfigs(): List<AudioConfig> = _availableConfigs.value ?: emptyList()
