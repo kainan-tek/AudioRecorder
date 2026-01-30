@@ -42,7 +42,7 @@ class RecorderViewModel(application: Application) : AndroidViewModel(application
     private fun loadConfigurations() {
         viewModelScope.launch(Dispatchers.IO) {
             val configs = AudioConfig.loadConfigs(getApplication())
-            launch(Dispatchers.Main) {
+            updateUI({
                 _availableConfigs.value = configs
                 if (configs.isNotEmpty()) {
                     val defaultConfig = configs[0]
@@ -50,24 +50,25 @@ class RecorderViewModel(application: Application) : AndroidViewModel(application
                     _currentConfig.value = defaultConfig
                     _statusMessage.value = "Configuration loaded: ${configs.size} configs"
                 }
-            }
+            })
         }
     }
 
     fun reloadConfigurations() {
         if (_recorderState.value == RecorderState.RECORDING) {
-            _statusMessage.value = "Cannot reload configuration while recording"
-            _errorMessage.value = "Please stop recording before reloading configuration"
+            updateUI({
+                _statusMessage.value = "Cannot reload configuration while recording"
+                _errorMessage.value = "Please stop recording before reloading configuration"
+            })
             return
         }
         
         viewModelScope.launch(Dispatchers.IO) {
             try {
                 val configs = AudioConfig.reloadConfigs(getApplication())
-                launch(Dispatchers.Main) {
+                updateUI({
                     if (configs.isNotEmpty()) {
                         _availableConfigs.value = configs
-                        // If current configuration is not in new configuration list, set first one as default
                         val currentConfigDescription = _currentConfig.value?.description
                         val newCurrentConfig = configs.find { it.description == currentConfigDescription } 
                             ?: configs[0]
@@ -79,14 +80,12 @@ class RecorderViewModel(application: Application) : AndroidViewModel(application
                         _statusMessage.value = "Configuration file is empty or format error"
                         _errorMessage.value = "No valid recording configuration found"
                     }
-                    // Clear error message
-                    _errorMessage.value = null
-                }
+                })
             } catch (e: Exception) {
-                launch(Dispatchers.Main) {
+                updateUI({
                     _statusMessage.value = "Configuration reload failed"
                     _errorMessage.value = "Configuration reload failed: ${e.message}"
-                }
+                })
             }
         }
     }
@@ -123,21 +122,39 @@ class RecorderViewModel(application: Application) : AndroidViewModel(application
     private fun setupRecorderListener() {
         audioRecorder.setRecordingListener(object : AudioRecorder.RecordingListener {
             override fun onRecordingStarted() {
-                _recorderState.postValue(RecorderState.RECORDING)
-                _statusMessage.postValue(getString(R.string.recording))
+                updateUI({
+                    _recorderState.value = RecorderState.RECORDING
+                    _statusMessage.value = getString(R.string.recording)
+                })
             }
 
             override fun onRecordingStopped() {
-                _recorderState.postValue(RecorderState.IDLE)
-                _statusMessage.postValue(getString(R.string.recording_stopped))
+                updateUI({
+                    _recorderState.value = RecorderState.IDLE
+                    _statusMessage.value = getString(R.string.recording_stopped)
+                })
             }
 
             override fun onRecordingError(error: String) {
-                _recorderState.postValue(RecorderState.ERROR)
-                _statusMessage.postValue(getString(R.string.error_recording_failed))
-                _errorMessage.postValue(error)
+                updateUI({
+                    _recorderState.value = RecorderState.ERROR
+                    _statusMessage.value = getString(R.string.error_recording_failed)
+                    _errorMessage.value = error
+                })
             }
         })
+    }
+
+    /**
+     * Execute UI updates on Main thread, clearing error message by default
+     */
+    private fun updateUI(block: () -> Unit, clearError: Boolean = true) {
+        viewModelScope.launch(Dispatchers.Main) {
+            block()
+            if (clearError) {
+                _errorMessage.value = null
+            }
+        }
     }
 
     private fun getString(resId: Int): String = getApplication<Application>().getString(resId)

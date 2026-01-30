@@ -4,7 +4,6 @@ import android.content.Context
 import android.media.AudioFormat
 import android.media.MediaRecorder
 import android.util.Log
-import com.example.audiorecorder.utils.AudioConstants
 import org.json.JSONObject
 import java.io.File
 
@@ -18,8 +17,7 @@ data class AudioConfig(
     val channelCount: Int = 2, // Channel count (1-16)
     val audioFormat: Int = AudioFormat.ENCODING_PCM_16BIT,
     val bufferMultiplier: Int = 4,
-    val audioFilePath: String = AudioConstants.DEFAULT_AUDIO_FILE,
-    val minBufferSize: Int = 960,
+    val audioFilePath: String = "/data/recorded_audio.wav",
     val description: String = "Default recording configuration"
 ) {
     // Generate channelMask based on channel count
@@ -27,8 +25,6 @@ data class AudioConfig(
         get() = when (channelCount) {
             1 -> AudioFormat.CHANNEL_IN_MONO
             2 -> AudioFormat.CHANNEL_IN_STEREO
-            // 4 -> AudioFormat.CHANNEL_IN_2POINT0POINT2
-            // 6 -> AudioFormat.CHANNEL_IN_5POINT1
             in 3..16 -> {
                 // For other multi-channel configurations, use bitmask to build channel configuration
                 var mask = 0
@@ -42,9 +38,27 @@ data class AudioConfig(
     
     companion object {
         private const val TAG = "AudioConfig"
-        private const val CONFIG_FILE_PATH = AudioConstants.EXTERNAL_CONFIG_PATH
-        private const val ASSETS_CONFIG_FILE = AudioConstants.ASSETS_CONFIG_FILE
+        private const val CONFIG_FILE_PATH = "/data/audio_recorder_configs.json"
+        private const val ASSETS_CONFIG_FILE = "audio_recorder_configs.json"
 
+        // Constant mapping tables to avoid repetitive when expressions
+        private val AUDIO_SOURCE_MAP = mapOf(
+            MediaRecorder.AudioSource.DEFAULT to "DEFAULT",
+            MediaRecorder.AudioSource.MIC to "MIC",
+            MediaRecorder.AudioSource.VOICE_UPLINK to "VOICE_UPLINK",
+            MediaRecorder.AudioSource.VOICE_DOWNLINK to "VOICE_DOWNLINK",
+            MediaRecorder.AudioSource.VOICE_CALL to "VOICE_CALL",
+            MediaRecorder.AudioSource.CAMCORDER to "CAMCORDER",
+            MediaRecorder.AudioSource.VOICE_RECOGNITION to "VOICE_RECOGNITION",
+            MediaRecorder.AudioSource.VOICE_COMMUNICATION to "VOICE_COMMUNICATION",
+            MediaRecorder.AudioSource.REMOTE_SUBMIX to "REMOTE_SUBMIX",
+            MediaRecorder.AudioSource.UNPROCESSED to "UNPROCESSED",
+            MediaRecorder.AudioSource.VOICE_PERFORMANCE to "VOICE_PERFORMANCE",
+            1997 to "ECHO_REFERENCE",
+            1998 to "RADIO_TUNER",
+            1999 to "HOTWORD",
+            2000 to "ULTRASOUND"
+        )
         /**
          * Load configuration file
          */
@@ -118,37 +132,28 @@ data class AudioConfig(
                 audioFormat = parseAudioFormatFromBits(audioFormatBits),
                 bufferMultiplier = json.optInt("bufferMultiplier", 4),
                 audioFilePath = json.optString("audioFilePath", "/data/recorded_audio.wav"),
-                minBufferSize = json.optInt("minBufferSize", 960),
                 description = json.optString("description", "Custom configuration")
             )
         }
 
-        // Parsing and conversion methods
-        private fun parseAudioSource(source: String) = when (source.uppercase()) {
-            "DEFAULT" -> MediaRecorder.AudioSource.DEFAULT
-            "MIC" -> MediaRecorder.AudioSource.MIC
-            "VOICE_UPLINK" -> MediaRecorder.AudioSource.VOICE_UPLINK
-            "VOICE_DOWNLINK" -> MediaRecorder.AudioSource.VOICE_DOWNLINK
-            "VOICE_CALL" -> MediaRecorder.AudioSource.VOICE_CALL
-            "CAMCORDER" -> MediaRecorder.AudioSource.CAMCORDER
-            "VOICE_RECOGNITION" -> MediaRecorder.AudioSource.VOICE_RECOGNITION
-            "VOICE_COMMUNICATION" -> MediaRecorder.AudioSource.VOICE_COMMUNICATION
-            "REMOTE_SUBMIX" -> MediaRecorder.AudioSource.REMOTE_SUBMIX
-            "UNPROCESSED" -> MediaRecorder.AudioSource.UNPROCESSED
-            "VOICE_PERFORMANCE" -> MediaRecorder.AudioSource.VOICE_PERFORMANCE
-            "ECHO_REFERENCE" -> 1997 // MediaRecorder.AudioSource.ECHO_REFERENCE
-            "RADIO_TUNER" -> 1998 // MediaRecorder.AudioSource.RADIO_TUNER
-            "HOTWORD" -> 1999 // MediaRecorder.AudioSource.HOTWORD
-            "ULTRASOUND" -> 2000 // MediaRecorder.AudioSource.ULTRASOUND
-            else -> MediaRecorder.AudioSource.MIC
+        // Parsing methods - unified approach with improved error handling
+        private fun parseAudioSource(source: String): Int {
+            val result = AUDIO_SOURCE_MAP.entries.find { it.value == source.uppercase() }?.key ?: MediaRecorder.AudioSource.MIC
+            if (result == MediaRecorder.AudioSource.MIC && source.isNotEmpty() && source.uppercase() != "MIC") {
+                Log.w(TAG, "Unknown AudioSource value: $source, using MIC")
+            }
+            return result
         }
 
-        private fun parseAudioFormatFromBits(bits: Int) = when (bits) {
+        private fun parseAudioFormatFromBits(bits: Int): Int = when (bits) {
             8 -> AudioFormat.ENCODING_PCM_8BIT
             16 -> AudioFormat.ENCODING_PCM_16BIT
             24 -> AudioFormat.ENCODING_PCM_24BIT_PACKED
             32 -> AudioFormat.ENCODING_PCM_32BIT
-            else -> AudioFormat.ENCODING_PCM_16BIT
+            else -> {
+                Log.w(TAG, "Unknown audio format bits: $bits, using 16-bit")
+                AudioFormat.ENCODING_PCM_16BIT
+            }
         }
     }
 }

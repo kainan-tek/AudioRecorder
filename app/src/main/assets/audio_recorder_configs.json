@@ -1,23 +1,30 @@
 {
   "configs": [
     {
-      "audioSource": "MIC",
-      "sampleRate": 16000,
+      "audioSource": "DEFAULT",
+      "sampleRate": 44100,
       "channelCount": 2,
       "audioFormat": 16,
-      "minBufferSize": 320,
       "bufferMultiplier": 2,
-      "audioFilePath": "/data/recorded_16k_2ch_16bit.wav",
-      "description": "Microphone Recording (Stereo)"
+      "audioFilePath": "/data/recorded_default_44k_2ch_16bit.wav",
+      "description": "Default Audio Source (44.1kHz Stereo)"
+    },
+    {
+      "audioSource": "MIC",
+      "sampleRate": 44100,
+      "channelCount": 2,
+      "audioFormat": 16,
+      "bufferMultiplier": 2,
+      "audioFilePath": "/data/recorded_mic_44k_2ch_16bit.wav",
+      "description": "Microphone Recording (44.1kHz Stereo)"
     },
     {
       "audioSource": "VOICE_UPLINK",
       "sampleRate": 8000,
       "channelCount": 1,
       "audioFormat": 16,
-      "minBufferSize": 160,
       "bufferMultiplier": 2,
-      "audioFilePath": "/data/recorded_8k_1ch_16bit.wav",
+      "audioFilePath": "/data/recorded_voice_uplink_8k_1ch_16bit.wav",
       "description": "Voice Call Uplink (Requires System Permission)"
     },
     {
@@ -25,9 +32,8 @@
       "sampleRate": 8000,
       "channelCount": 1,
       "audioFormat": 16,
-      "minBufferSize": 160,
       "bufferMultiplier": 2,
-      "audioFilePath": "/data/recorded_8k_1ch_16bit.wav",
+      "audioFilePath": "/data/recorded_voice_downlink_8k_1ch_16bit.wav",
       "description": "Voice Call Downlink (Requires System Permission)"
     },
     {
@@ -35,49 +41,44 @@
       "sampleRate": 8000,
       "channelCount": 1,
       "audioFormat": 16,
-      "minBufferSize": 160,
       "bufferMultiplier": 2,
-      "audioFilePath": "/data/recorded_8k_1ch_16bit.wav",
+      "audioFilePath": "/data/recorded_voice_call_8k_1ch_16bit.wav",
       "description": "Voice Call Bidirectional (Requires System Permission)"
     },
     {
       "audioSource": "CAMCORDER",
-      "sampleRate": 16000,
+      "sampleRate": 44100,
       "channelCount": 2,
       "audioFormat": 16,
-      "minBufferSize": 320,
       "bufferMultiplier": 2,
-      "audioFilePath": "/data/recorded_16k_2ch_16bit.wav",
+      "audioFilePath": "/data/recorded_camcorder_44k_2ch_16bit.wav",
       "description": "Camcorder Recording (Video Recording Optimized)"
     },
     {
       "audioSource": "VOICE_RECOGNITION",
       "sampleRate": 16000,
-      "channelCount": 2,
+      "channelCount": 1,
       "audioFormat": 16,
-      "minBufferSize": 320,
       "bufferMultiplier": 2,
-      "audioFilePath": "/data/recorded_16k_2ch_16bit.wav",
-      "description": "Voice Recognition Recording (16kHz Stereo)"
+      "audioFilePath": "/data/recorded_voice_recognition_16k_1ch_16bit.wav",
+      "description": "Voice Recognition Recording (16kHz Mono)"
     },
     {
       "audioSource": "VOICE_COMMUNICATION",
       "sampleRate": 16000,
-      "channelCount": 2,
+      "channelCount": 1,
       "audioFormat": 16,
-      "minBufferSize": 320,
       "bufferMultiplier": 2,
-      "audioFilePath": "/data/recorded_16k_2ch_16bit.wav",
+      "audioFilePath": "/data/recorded_voice_communication_16k_1ch_16bit.wav",
       "description": "Voice Communication Recording (VoIP Optimized)"
     },
     {
       "audioSource": "REMOTE_SUBMIX",
-      "sampleRate": 16000,
+      "sampleRate": 44100,
       "channelCount": 2,
       "audioFormat": 16,
-      "minBufferSize": 320,
       "bufferMultiplier": 2,
-      "audioFilePath": "/data/recorded_16k_2ch_16bit.wav",
+      "audioFilePath": "/data/recorded_remote_submix_44k_2ch_16bit.wav",
       "description": "Remote Submix (Requires System Permission)"
     },
     {
@@ -85,9 +86,8 @@
       "sampleRate": 48000,
       "channelCount": 2,
       "audioFormat": 16,
-      "minBufferSize": 960,
       "bufferMultiplier": 2,
-      "audioFilePath": "/data/recorded_48k_2ch_16bit.wav",
+      "audioFilePath": "/data/recorded_unprocessed_48k_2ch_16bit.wav",
       "description": "Unprocessed Audio (Raw Signal)"
     },
     {
@@ -95,10 +95,45 @@
       "sampleRate": 48000,
       "channelCount": 1,
       "audioFormat": 16,
-      "minBufferSize": 480,
       "bufferMultiplier": 1,
-      "audioFilePath": "/data/recorded_48k_1ch_16bit.wav",
+      "audioFilePath": "/data/recorded_voice_performance_48k_1ch_16bit.wav",
       "description": "Voice Performance Recording (Real-time Processing/Karaoke)"
+    },
+    {
+      "audioSource": "ECHO_REFERENCE",
+      "sampleRate": 48000,
+      "channelCount": 2,
+      "audioFormat": 16,
+      "bufferMultiplier": 2,
+      "audioFilePath": "/data/recorded_echo_reference_48k_2ch_16bit.wav",
+      "description": "Echo Reference (Requires System Permission)"
+    },
+    {
+      "audioSource": "RADIO_TUNER",
+      "sampleRate": 44100,
+      "channelCount": 2,
+      "audioFormat": 16,
+      "bufferMultiplier": 2,
+      "audioFilePath": "/data/recorded_radio_tuner_44k_2ch_16bit.wav",
+      "description": "Radio Tuner (Requires System Permission)"
+    },
+    {
+      "audioSource": "HOTWORD",
+      "sampleRate": 16000,
+      "channelCount": 1,
+      "audioFormat": 16,
+      "bufferMultiplier": 2,
+      "audioFilePath": "/data/recorded_hotword_16k_1ch_16bit.wav",
+      "description": "Hotword Detection (Always-on Voice Detection)"
+    },
+    {
+      "audioSource": "ULTRASOUND",
+      "sampleRate": 96000,
+      "channelCount": 1,
+      "audioFormat": 16,
+      "bufferMultiplier": 3,
+      "audioFilePath": "/data/recorded_ultrasound_96k_1ch_16bit.wav",
+      "description": "Ultrasound Recording (High Frequency Audio)"
     }
   ]
 }

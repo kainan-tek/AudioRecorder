@@ -1,16 +1,11 @@
 package com.example.audiorecorder.recorder
 
-import android.Manifest
-import android.annotation.SuppressLint
 import android.content.Context
-import android.content.pm.PackageManager
 import android.media.AudioFormat
 import android.media.AudioRecord
 import android.util.Log
-import androidx.core.content.ContextCompat
 import com.example.audiorecorder.config.AudioConfig
 import com.example.audiorecorder.model.WaveFile
-import com.example.audiorecorder.utils.AudioConstants
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
@@ -18,8 +13,6 @@ import kotlinx.coroutines.cancel
 import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
 import java.io.File
-import java.text.SimpleDateFormat
-import java.util.Date
 import java.util.concurrent.atomic.AtomicBoolean
 
 /**
@@ -70,13 +63,6 @@ class AudioRecorder(private val context: Context) {
     }
 
     fun startRecording(): Boolean {
-        // Explicitly check recording permission
-        if (ContextCompat.checkSelfPermission(context, Manifest.permission.RECORD_AUDIO) 
-            != PackageManager.PERMISSION_GRANTED) {
-            handleError("Recording permission not granted")
-            return false
-        }
-        
         if (isRecording.get()) {
             stopRecording()
         }
@@ -89,8 +75,8 @@ class AudioRecorder(private val context: Context) {
                 Log.i(TAG, "Recording started successfully")
                 true
             } else false
-        } catch (_: SecurityException) {
-            handleError("Recording permission denied")
+        } catch (e: SecurityException) {
+            handleError("Recording permission denied: ${e.message}")
             false
         } catch (e: Exception) {
             handleError("Recording initialization failed: ${e.message}")
@@ -108,10 +94,18 @@ class AudioRecorder(private val context: Context) {
         Log.i(TAG, "Recording stopped")
     }
 
+    /**
+     * Release all resources
+     */
     fun release() {
+        Log.d(TAG, "Releasing recorder resources")
         stopRecording()
         listener = null  // Clear listener reference to prevent memory leaks
-        recordingScope.cancel()
+        try {
+            recordingScope.cancel()
+        } catch (e: Exception) {
+            Log.w(TAG, "Error canceling recording scope", e)
+        }
     }
 
     private fun createOutputFile(): Boolean {
@@ -140,16 +134,13 @@ class AudioRecorder(private val context: Context) {
                 currentConfig.channelMask, 
                 currentConfig.audioFormat
             )
-            
             if (minBufferSize <= 0) {
                 handleError("Unsupported audio parameter combination")
                 return false
             }
             
-            val bufferSize = maxOf(
-                minBufferSize * currentConfig.bufferMultiplier, 
-                currentConfig.minBufferSize
-            )
+            val bufferSize = minBufferSize * currentConfig.bufferMultiplier
+            Log.d(TAG, "Buffer calculation: minBufferSize=$minBufferSize, multiplier=${currentConfig.bufferMultiplier}, final=$bufferSize")
 
             audioRecord = AudioRecord.Builder()
                 .setAudioSource(currentConfig.audioSource)
@@ -203,24 +194,23 @@ class AudioRecorder(private val context: Context) {
 
     private fun startRecordingLoop() {
         recordingJob = recordingScope.launch {
-            // Adjust buffer size based on channel count
-            val baseBufferSize = when {
-                currentConfig.channelCount >= 12 -> AudioConstants.BUFFER_SIZE_12CH
-                currentConfig.channelCount >= 8 -> AudioConstants.BUFFER_SIZE_8CH
-                currentConfig.channelCount >= 6 -> AudioConstants.BUFFER_SIZE_6CH
-                else -> AudioConstants.BUFFER_SIZE_DEFAULT
-            }
-
-            val buffer = ByteArray(baseBufferSize)
+            val audioRecord = audioRecord ?: return@launch
+            
+            // Use a read buffer that's a fraction of the AudioRecord's internal buffer
+            // This ensures smooth recording without overruns
+            val audioRecordBufferSize = audioRecord.bufferSizeInFrames * currentConfig.channelCount * (getBitsPerSample(currentConfig.audioFormat) / 8)
+            val readBufferSize = audioRecordBufferSize / 3  // Use 1/3 of AudioRecord buffer
+            
+            val buffer = ByteArray(readBufferSize)
             var totalBytes = 0L
             
             try {
-                audioRecord?.startRecording()
-                Log.i(TAG, "Started recording - ${currentConfig.description}, buffer: $baseBufferSize bytes")
+                audioRecord.startRecording()
+                Log.i(TAG, "Started recording - ${currentConfig.description}")
+                Log.d(TAG, "AudioRecord buffer: $audioRecordBufferSize bytes, Read buffer: $readBufferSize bytes")
                 
                 while (isActive && isRecording.get()) {
-                    val bytesRead = audioRecord?.read(buffer, 0, buffer.size) ?: -1
-                    
+                    val bytesRead = audioRecord.read(buffer, 0, buffer.size)
                     if (bytesRead <= 0) {
                         Log.w(TAG, "AudioRecord read failed or reached end: $bytesRead")
                         break
@@ -229,15 +219,21 @@ class AudioRecorder(private val context: Context) {
                     waveFile?.writeAudioData(buffer, 0, bytesRead)
                     totalBytes += bytesRead
                     
-                    // Periodically output recording progress
-                    if (totalBytes % AudioConstants.PROGRESS_LOG_INTERVAL == 0L && totalBytes > 0) {
+                    // Periodically output recording progress (every 1MB)
+                    if (totalBytes % (1024 * 1024L) == 0L && totalBytes > 0) {
                         val mbRecorded = totalBytes / (1024.0 * 1024.0)
-                        Log.d(TAG, "Recording progress: ${String.format("%.1f", mbRecorded)}MB")
+                        Log.d(TAG, "Recording progress: ${String.format(java.util.Locale.US, "%.1f", mbRecorded)}MB")
                     }
                 }
-            } catch (_: SecurityException) {
+                
                 if (isRecording.get()) {
-                    handleError("Recording permission denied")
+                    val mbRecorded = totalBytes / (1024.0 * 1024.0)
+                    Log.i(TAG, "Recording completed: ${String.format(java.util.Locale.US, "%.1f", mbRecorded)}MB")
+                    stopRecording()
+                }
+            } catch (e: SecurityException) {
+                if (isRecording.get()) {
+                    handleError("Recording permission denied: ${e.message}")
                 }
             } catch (e: Exception) {
                 if (isRecording.get()) {
@@ -247,13 +243,19 @@ class AudioRecorder(private val context: Context) {
         }
     }
 
+    /**
+     * Release audio resources consistently
+     */
     private fun releaseResources() {
         try {
             audioRecord?.apply {
-                if (state == AudioRecord.STATE_INITIALIZED) stop()
+                if (state == AudioRecord.STATE_INITIALIZED) {
+                    stop()
+                }
                 release()
             }
             audioRecord = null
+
             waveFile?.close()
             waveFile = null
         } catch (e: Exception) {
@@ -261,8 +263,11 @@ class AudioRecorder(private val context: Context) {
         }
     }
 
+    /**
+     * Handle errors consistently
+     */
     private fun handleError(message: String) {
-        Log.e(TAG, message)
+        Log.e(TAG, "Error: $message")
         listener?.onRecordingError(message)
         releaseResources()
     }
@@ -275,11 +280,10 @@ class AudioRecorder(private val context: Context) {
         else -> 16
     }
     
-    @SuppressLint("SimpleDateFormat")
     private fun generateOutputFilePath(): String {
-        val dateFormat = SimpleDateFormat("yyyyMMdd_HHmmss")
-        val dateTime = dateFormat.format(Date())
-        val channelCount = currentConfig.channelCount // Directly use channel count from configuration
+        val dateTime = java.time.LocalDateTime.now()
+            .format(java.time.format.DateTimeFormatter.ofPattern("yyyyMMdd_HHmmss"))
+        val channelCount = currentConfig.channelCount
         val bitsPerSample = getBitsPerSample(currentConfig.audioFormat)
         val fileName = "recording_${currentConfig.sampleRate}Hz_${channelCount}ch_${bitsPerSample}bit_${dateTime}.wav"
         return File(context.filesDir, fileName).absolutePath

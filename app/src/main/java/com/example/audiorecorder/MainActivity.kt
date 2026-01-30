@@ -70,7 +70,7 @@ class MainActivity : AppCompatActivity() {
         initViews()
         initViewModel()
         setupClickListeners()
-        checkPermissions()
+        if (!hasAudioPermission()) requestAudioPermission()
     }
 
     private fun initViews() {
@@ -86,7 +86,7 @@ class MainActivity : AppCompatActivity() {
         
         // Observe recording state
         viewModel.recorderState.observe(this) { state ->
-            updateUI(state)
+            updateButtonStates(state)
             updateRecordingInfo()
         }
         
@@ -96,13 +96,13 @@ class MainActivity : AppCompatActivity() {
         }
         
         // Observe error messages
-        viewModel.errorMessage.observe(this) { error -> 
+        viewModel.errorMessage.observe(this) { error ->
             error?.let { handleError(it) }
         }
         
         // Observe current configuration
         viewModel.currentConfig.observe(this) { config ->
-            config?.let { 
+            config?.let {
                 configButton.text = getString(R.string.audio_config_format, it.description)
                 updateRecordingInfo(it)
             }
@@ -111,11 +111,11 @@ class MainActivity : AppCompatActivity() {
 
     private fun setupClickListeners() {
         startButton.setOnClickListener {
-            if (hasAudioPermission()) {
-                viewModel.startRecording()
-            } else {
+            if (!hasAudioPermission()) {
                 requestAudioPermission()
+                return@setOnClickListener
             }
+            viewModel.startRecording()
         }
         
         stopButton.setOnClickListener { 
@@ -142,9 +142,7 @@ class MainActivity : AppCompatActivity() {
      * Reset recorder state
      */
     private fun resetRecorderState() {
-        startButton.isEnabled = true
-        stopButton.isEnabled = false
-        configButton.isEnabled = true
+        updateButtonStates(RecorderState.IDLE)
         statusText.text = getString(R.string.status_ready)
     }
 
@@ -155,18 +153,20 @@ class MainActivity : AppCompatActivity() {
             return
         }
         
-        val items = configs.map { it.description }.toMutableList().apply {
-            add("🔄 Reload configuration file")
-        }
+        val configNames = configs.map { it.description }.toMutableList()
+        configNames.add("🔄 Reload configuration file")
         
         AlertDialog.Builder(this)
-            .setTitle("Select Recording Configuration")
-            .setItems(items.toTypedArray()) { _, which ->
+            .setTitle("Select Recording Configuration (${configs.size} configurations)")
+            .setItems(configNames.toTypedArray()) { _, which ->
                 if (which == configs.size) {
+                    // Reload configurations
                     reloadConfigurations()
                 } else {
-                    viewModel.setAudioConfig(configs[which])
-                    showToast("Switched to: ${configs[which].description}")
+                    // Select configuration
+                    val selectedConfig = configs[which]
+                    viewModel.setAudioConfig(selectedConfig)
+                    showToast("Switched to: ${selectedConfig.description}")
                 }
             }
             .setNegativeButton("Cancel", null)
@@ -186,7 +186,10 @@ class MainActivity : AppCompatActivity() {
         }
     }
 
-    private fun updateUI(state: RecorderState) {
+    /**
+     * Update button states based on recording state
+     */
+    private fun updateButtonStates(state: RecorderState) {
         when (state) {
             RecorderState.IDLE -> {
                 startButton.isEnabled = true
@@ -206,17 +209,23 @@ class MainActivity : AppCompatActivity() {
         }
     }
 
-    private fun checkPermissions() {
-        if (!hasAudioPermission()) {
-            requestAudioPermission()
-        }
-    }
-
-    private fun hasAudioPermission() = 
+    private fun hasAudioPermission(): Boolean = 
         ContextCompat.checkSelfPermission(this, Manifest.permission.RECORD_AUDIO) == PackageManager.PERMISSION_GRANTED
 
     private fun requestAudioPermission() {
-        ActivityCompat.requestPermissions(this, arrayOf(Manifest.permission.RECORD_AUDIO), PERMISSION_REQUEST_CODE)
+        if (ActivityCompat.shouldShowRequestPermissionRationale(this, Manifest.permission.RECORD_AUDIO)) {
+            // Show explanation dialog
+            AlertDialog.Builder(this)
+                .setTitle("Permission Required")
+                .setMessage("This app needs microphone access permission to record audio.")
+                .setPositiveButton("Grant") { _, _ ->
+                    ActivityCompat.requestPermissions(this, arrayOf(Manifest.permission.RECORD_AUDIO), PERMISSION_REQUEST_CODE)
+                }
+                .setNegativeButton("Cancel", null)
+                .show()
+        } else {
+            ActivityCompat.requestPermissions(this, arrayOf(Manifest.permission.RECORD_AUDIO), PERMISSION_REQUEST_CODE)
+        }
     }
 
     override fun onRequestPermissionsResult(requestCode: Int, permissions: Array<out String>, grantResults: IntArray) {
