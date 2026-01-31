@@ -4,6 +4,7 @@ import android.content.Context
 import android.media.AudioFormat
 import android.media.AudioRecord
 import android.util.Log
+import com.example.audiorecorder.common.AudioConstants
 import com.example.audiorecorder.config.AudioConfig
 import com.example.audiorecorder.model.WaveFile
 import kotlinx.coroutines.CoroutineScope
@@ -114,7 +115,7 @@ class AudioRecorder(private val context: Context) {
         
         waveFile = WaveFile(outputPath)
         val channelCount = currentConfig.channelCount // Directly use channel count from configuration
-        val bitsPerSample = getBitsPerSample(currentConfig.audioFormat)
+        val bitsPerSample = currentConfig.audioFormatBit
         
         return if (waveFile!!.create(currentConfig.sampleRate, channelCount, bitsPerSample)) {
             Log.d(TAG, "Output file created: $outputPath (${channelCount} channels)")
@@ -130,9 +131,9 @@ class AudioRecorder(private val context: Context) {
             if (!validateAudioParameters()) return false
 
             val minBufferSize = AudioRecord.getMinBufferSize(
-                currentConfig.sampleRate, 
-                currentConfig.channelMask, 
-                currentConfig.audioFormat
+                currentConfig.sampleRate,
+                AudioConstants.getChannelMask(currentConfig.channelCount),
+                AudioConstants.getAudioFormat(currentConfig.audioFormatBit)
             )
             if (minBufferSize <= 0) {
                 handleError("Unsupported audio parameter combination")
@@ -143,12 +144,12 @@ class AudioRecorder(private val context: Context) {
             Log.d(TAG, "Buffer calculation: minBufferSize=$minBufferSize, multiplier=${currentConfig.bufferMultiplier}, final=$bufferSize")
 
             audioRecord = AudioRecord.Builder()
-                .setAudioSource(currentConfig.audioSource)
+                .setAudioSource(AudioConstants.getAudioSource(currentConfig.audioSource))
                 .setAudioFormat(
                     AudioFormat.Builder()
                         .setSampleRate(currentConfig.sampleRate)
-                        .setChannelMask(currentConfig.channelMask)
-                        .setEncoding(currentConfig.audioFormat)
+                        .setChannelMask(AudioConstants.getChannelMask(currentConfig.channelCount))
+                        .setEncoding(AudioConstants.getAudioFormat(currentConfig.audioFormatBit))
                         .build()
                 )
                 .setBufferSizeInBytes(bufferSize)
@@ -173,7 +174,7 @@ class AudioRecorder(private val context: Context) {
     private fun validateAudioParameters(): Boolean {
         val sampleRate = currentConfig.sampleRate
         val channelCount = currentConfig.channelCount // Directly use channel count from configuration
-        val bitsPerSample = getBitsPerSample(currentConfig.audioFormat)
+        val bitsPerSample = currentConfig.audioFormatBit
         
         return when {
             sampleRate !in 8000..192000 -> {
@@ -198,7 +199,7 @@ class AudioRecorder(private val context: Context) {
             
             // Use a read buffer that's a fraction of the AudioRecord's internal buffer
             // This ensures smooth recording without overruns
-            val audioRecordBufferSize = audioRecord.bufferSizeInFrames * currentConfig.channelCount * (getBitsPerSample(currentConfig.audioFormat) / 8)
+            val audioRecordBufferSize = audioRecord.bufferSizeInFrames * currentConfig.channelCount * (currentConfig.audioFormatBit / 8)
             val readBufferSize = audioRecordBufferSize / 3  // Use 1/3 of AudioRecord buffer
             
             val buffer = ByteArray(readBufferSize)
@@ -271,20 +272,12 @@ class AudioRecorder(private val context: Context) {
         listener?.onRecordingError(message)
         releaseResources()
     }
-
-    private fun getBitsPerSample(audioFormat: Int) = when (audioFormat) {
-        AudioFormat.ENCODING_PCM_8BIT -> 8
-        AudioFormat.ENCODING_PCM_16BIT -> 16
-        AudioFormat.ENCODING_PCM_24BIT_PACKED -> 24
-        AudioFormat.ENCODING_PCM_32BIT -> 32
-        else -> 16
-    }
     
     private fun generateOutputFilePath(): String {
         val dateTime = java.time.LocalDateTime.now()
             .format(java.time.format.DateTimeFormatter.ofPattern("yyyyMMdd_HHmmss"))
         val channelCount = currentConfig.channelCount
-        val bitsPerSample = getBitsPerSample(currentConfig.audioFormat)
+        val bitsPerSample = currentConfig.audioFormatBit
         val fileName = "recording_${currentConfig.sampleRate}Hz_${channelCount}ch_${bitsPerSample}bit_${dateTime}.wav"
         return File(context.filesDir, fileName).absolutePath
     }

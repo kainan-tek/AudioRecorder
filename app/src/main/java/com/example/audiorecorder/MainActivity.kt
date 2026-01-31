@@ -12,12 +12,8 @@ import androidx.appcompat.app.AppCompatActivity
 import androidx.core.app.ActivityCompat
 import androidx.core.content.ContextCompat
 import androidx.lifecycle.ViewModelProvider
-import com.example.audiorecorder.config.AudioConfig
 import com.example.audiorecorder.recorder.RecorderState
 import com.example.audiorecorder.viewmodel.RecorderViewModel
-import com.example.audiorecorder.utils.audioSourceToString
-import com.example.audiorecorder.utils.audioFormatToString
-import com.example.audiorecorder.utils.channelCountToString
 import android.widget.Button
 
 /**
@@ -104,7 +100,7 @@ class MainActivity : AppCompatActivity() {
         viewModel.currentConfig.observe(this) { config ->
             config?.let {
                 configButton.text = getString(R.string.audio_config_format, it.description)
-                updateRecordingInfo(it)
+                updateRecordingInfo()
             }
         }
     }
@@ -267,18 +263,13 @@ class MainActivity : AppCompatActivity() {
     @SuppressLint("SetTextI18n")
     private fun updateRecordingInfo() {
         viewModel.currentConfig.value?.let { config ->
-            updateRecordingInfo(config)
+            val configInfo = "Current Config: ${config.description}\n" +
+                    "Source: ${config.audioSource}\n" +
+                    "Parameters: ${config.sampleRate}Hz | ${config.channelCount}ch | ${config.audioFormatBit}bit\n" +
+                    "File: ${config.audioFilePath}"
+            fileInfoText.text = configInfo
         } ?: run {
-            fileInfoText.text = "Record information"
+            fileInfoText.text = "Recording Info"
         }
-    }
-    
-    @SuppressLint("SetTextI18n")
-    private fun updateRecordingInfo(config: AudioConfig) {
-        val configInfo = "Current configuration: ${config.description}\n" +
-                "Source: ${config.audioSource.audioSourceToString()}\n" +
-                "Parameters: ${config.sampleRate}Hz | ${config.channelCount.channelCountToString()} | ${config.audioFormat.audioFormatToString()}\n" +
-                "File: ${config.audioFilePath}"
-        fileInfoText.text = configInfo
     }
 }
