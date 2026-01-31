@@ -115,7 +115,7 @@ class AudioRecorder(private val context: Context) {
         
         waveFile = WaveFile(outputPath)
         val channelCount = currentConfig.channelCount // Directly use channel count from configuration
-        val bitsPerSample = currentConfig.audioFormatBit
+        val bitsPerSample = currentConfig.audioFormat
         
         return if (waveFile!!.create(currentConfig.sampleRate, channelCount, bitsPerSample)) {
             Log.d(TAG, "Output file created: $outputPath (${channelCount} channels)")
@@ -133,7 +133,7 @@ class AudioRecorder(private val context: Context) {
             val minBufferSize = AudioRecord.getMinBufferSize(
                 currentConfig.sampleRate,
                 AudioConstants.getChannelMask(currentConfig.channelCount),
-                AudioConstants.getAudioFormat(currentConfig.audioFormatBit)
+                AudioConstants.getFormatFromBitDepth(currentConfig.audioFormat)
             )
             if (minBufferSize <= 0) {
                 handleError("Unsupported audio parameter combination")
@@ -149,7 +149,7 @@ class AudioRecorder(private val context: Context) {
                     AudioFormat.Builder()
                         .setSampleRate(currentConfig.sampleRate)
                         .setChannelMask(AudioConstants.getChannelMask(currentConfig.channelCount))
-                        .setEncoding(AudioConstants.getAudioFormat(currentConfig.audioFormatBit))
+                        .setEncoding(AudioConstants.getFormatFromBitDepth(currentConfig.audioFormat))
                         .build()
                 )
                 .setBufferSizeInBytes(bufferSize)
@@ -174,7 +174,7 @@ class AudioRecorder(private val context: Context) {
     private fun validateAudioParameters(): Boolean {
         val sampleRate = currentConfig.sampleRate
         val channelCount = currentConfig.channelCount // Directly use channel count from configuration
-        val bitsPerSample = currentConfig.audioFormatBit
+        val bitsPerSample = currentConfig.audioFormat
         
         return when {
             sampleRate !in 8000..192000 -> {
@@ -199,7 +199,7 @@ class AudioRecorder(private val context: Context) {
             
             // Use a read buffer that's a fraction of the AudioRecord's internal buffer
             // This ensures smooth recording without overruns
-            val audioRecordBufferSize = audioRecord.bufferSizeInFrames * currentConfig.channelCount * (currentConfig.audioFormatBit / 8)
+            val audioRecordBufferSize = audioRecord.bufferSizeInFrames * currentConfig.channelCount * (currentConfig.audioFormat / 8)
             val readBufferSize = audioRecordBufferSize / 3  // Use 1/3 of AudioRecord buffer
             
             val buffer = ByteArray(readBufferSize)
@@ -277,7 +277,7 @@ class AudioRecorder(private val context: Context) {
         val dateTime = java.time.LocalDateTime.now()
             .format(java.time.format.DateTimeFormatter.ofPattern("yyyyMMdd_HHmmss"))
         val channelCount = currentConfig.channelCount
-        val bitsPerSample = currentConfig.audioFormatBit
+        val bitsPerSample = currentConfig.audioFormat
         val fileName = "recording_${currentConfig.sampleRate}Hz_${channelCount}ch_${bitsPerSample}bit_${dateTime}.wav"
         return File(context.filesDir, fileName).absolutePath
     }

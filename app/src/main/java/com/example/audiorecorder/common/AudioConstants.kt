@@ -71,7 +71,7 @@ object AudioConstants {
     /**
      * Get audio format from bit depth, supporting multiple bit depths
      */
-    fun getAudioFormat(bitsPerSample: Int): Int {
+    fun getFormatFromBitDepth(bitsPerSample: Int): Int {
         val audioFormats = mapOf(
             8 to AudioFormat.ENCODING_PCM_8BIT,
             16 to AudioFormat.ENCODING_PCM_16BIT,

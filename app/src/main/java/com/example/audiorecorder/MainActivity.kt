@@ -37,9 +37,8 @@ import android.widget.Button
  *       "sampleRate": 48000,
  *       "channelCount": 2,
  *       "audioFormat": 16,
- *       "bufferMultiplier": 4,
- *       "audioFilePath": "/data/recorded_audio.wav",
- *       "minBufferSize": 960,
+ *       "bufferMultiplier": 2,
+ *       "audioFilePath": "/data/recorded_48k_2ch_16bit.wav",
  *       "description": "Custom configuration name"
  *     }
  *   ]
@@ -265,7 +264,7 @@ class MainActivity : AppCompatActivity() {
         viewModel.currentConfig.value?.let { config ->
             val configInfo = "Current Config: ${config.description}\n" +
                     "Source: ${config.audioSource}\n" +
-                    "Parameters: ${config.sampleRate}Hz | ${config.channelCount}ch | ${config.audioFormatBit}bit\n" +
+                    "Parameters: ${config.sampleRate}Hz | ${config.channelCount}ch | ${config.audioFormat}bit\n" +
                     "File: ${config.audioFilePath}"
             fileInfoText.text = configInfo
         } ?: run {
