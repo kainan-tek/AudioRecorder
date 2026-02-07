@@ -6,6 +6,11 @@ import android.app.AlertDialog
 import android.content.pm.PackageManager
 import android.os.Bundle
 import android.util.Log
+import android.view.View
+import android.widget.AdapterView
+import android.widget.ArrayAdapter
+import android.widget.Button
+import android.widget.Spinner
 import android.widget.TextView
 import android.widget.Toast
 import androidx.appcompat.app.AppCompatActivity
@@ -14,44 +19,18 @@ import androidx.core.content.ContextCompat
 import androidx.lifecycle.ViewModelProvider
 import com.example.audiorecorder.recorder.RecorderState
 import com.example.audiorecorder.viewmodel.RecorderViewModel
-import android.widget.Button
 
-/**
- * Concise audio recorder main interface
- * Supports loading audio configurations from external JSON files for convenient testing of different scenarios
- * 
- * Usage instructions:
- * 1. adb root && adb remount && adb shell setenforce 0
- * 2. Push configuration file to device: adb push audio_recorder_configs.json /data/
- * 3. Install and run the application
- * 4. In the app, click the "Configuration" button and select "Reload configuration file" to apply changes
- * 5. Recording files are saved to /data/recorded_audio.wav by default
- * 
- * System requirements: Android 13 (API 33+)
- * 
- * JSON configuration file format:
- * {
- *   "configs": [
- *     {
- *       "audioSource": "MIC",
- *       "sampleRate": 48000,
- *       "channelCount": 2,
- *       "audioFormat": 16,
- *       "bufferMultiplier": 2,
- *       "audioFilePath": "/data/recorded_48k_2ch_16bit.wav",
- *       "description": "Custom configuration name"
- *     }
- *   ]
- * }
- */
+
 class MainActivity : AppCompatActivity() {
     
     private lateinit var viewModel: RecorderViewModel
     private lateinit var startButton: Button
     private lateinit var stopButton: Button
-    private lateinit var configButton: Button
+    private lateinit var configSpinner: Spinner
     private lateinit var statusText: TextView
     private lateinit var fileInfoText: TextView
+    
+    private var isSpinnerInitialized = false
 
     companion object {
         private const val TAG = "MainActivity"
@@ -71,7 +50,7 @@ class MainActivity : AppCompatActivity() {
     private fun initViews() {
         startButton = findViewById(R.id.recordButton)
         stopButton = findViewById(R.id.stopButton)
-        configButton = findViewById(R.id.configButton)
+        configSpinner = findViewById(R.id.configSpinner)
         statusText = findViewById(R.id.statusTextView)
         fileInfoText = findViewById(R.id.recordingInfoTextView)
     }
@@ -98,8 +77,12 @@ class MainActivity : AppCompatActivity() {
         // Observe current configuration
         viewModel.currentConfig.observe(this) { config ->
             config?.let {
-                configButton.text = getString(R.string.audio_config_format, it.description)
                 updateRecordingInfo()
+                updateSpinnerSelection(it.description)
+                // Initialize spinner when config is first loaded
+                if (configSpinner.adapter == null) {
+                    setupConfigSpinner()
+                }
             }
         }
     }
@@ -113,71 +96,76 @@ class MainActivity : AppCompatActivity() {
             viewModel.startRecording()
         }
         
-        stopButton.setOnClickListener { 
-            viewModel.stopRecording() 
-        }
-        
-        configButton.setOnClickListener { 
-            showConfigSelectionDialog() 
+        stopButton.setOnClickListener {
+            viewModel.stopRecording()
         }
     }
     
     /**
-     * Handle audio recording errors
+     * Setup configuration spinner
      */
-    private fun handleError(error: String) {
-        Log.e(TAG, "Audio recording error: $error")
-        showToast("Recording error: $error")
-        
-        // Reset recorder state
-        resetRecorderState()
-    }
-    
-    /**
-     * Reset recorder state
-     */
-    private fun resetRecorderState() {
-        updateButtonStates(RecorderState.IDLE)
-        statusText.text = getString(R.string.status_ready)
-    }
-
-    private fun showConfigSelectionDialog() {
+    private fun setupConfigSpinner() {
         val configs = viewModel.getAllAudioConfigs()
+        Log.d(TAG, "Setting up config spinner with ${configs.size} configurations")
+        
         if (configs.isEmpty()) {
-            showToast("No available configurations")
+            Log.w(TAG, "No configurations available for spinner")
             return
         }
         
-        val configNames = configs.map { it.description }.toMutableList()
-        configNames.add("🔄 Reload configuration file")
+        val configNames = configs.map { it.description }
+        Log.d(TAG, "Config names: $configNames")
         
-        AlertDialog.Builder(this)
-            .setTitle("Select Recording Configuration (${configs.size} configurations)")
-            .setItems(configNames.toTypedArray()) { _, which ->
-                if (which == configs.size) {
-                    // Reload configurations
-                    reloadConfigurations()
-                } else {
-                    // Select configuration
-                    val selectedConfig = configs[which]
-                    viewModel.setAudioConfig(selectedConfig)
-                    showToast("Switched to: ${selectedConfig.description}")
-                }
+        val adapter = ArrayAdapter(this, android.R.layout.simple_spinner_item, configNames)
+        adapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item)
+        configSpinner.adapter = adapter
+        
+        // Set initial selection
+        val currentConfig = viewModel.currentConfig.value
+        currentConfig?.let {
+            val index = configs.indexOfFirst { config -> config.description == it.description }
+            if (index >= 0) {
+                configSpinner.setSelection(index)
+                Log.d(TAG, "Set initial spinner selection to index $index: ${it.description}")
             }
-            .setNegativeButton("Cancel", null)
-            .show()
+        }
+        
+        configSpinner.onItemSelectedListener = object : AdapterView.OnItemSelectedListener {
+            override fun onItemSelected(parent: AdapterView<*>?, view: View?, position: Int, id: Long) {
+                if (!isSpinnerInitialized) {
+                    isSpinnerInitialized = true
+                    Log.d(TAG, "Spinner initialized, skipping first selection")
+                    return
+                }
+                
+                val selectedConfig = configs[position]
+                Log.d(TAG, "Config selected: ${selectedConfig.description}")
+                viewModel.setAudioConfig(selectedConfig)
+                showToast("Switched to: ${selectedConfig.description}")
+            }
+            
+            override fun onNothingSelected(parent: AdapterView<*>?) {
+                Log.d(TAG, "Nothing selected in spinner")
+            }
+        }
+        
+        // Add long press listener to reload configurations
+        configSpinner.setOnLongClickListener {
+            Log.d(TAG, "Long press detected on spinner")
+            reloadConfigurations()
+            true
+        }
     }
     
     /**
-     * Reload configuration file
+     * Update spinner selection based on config description
      */
-    private fun reloadConfigurations() {
-        try {
-            viewModel.reloadConfigurations()
-            showToast("Reloading configuration file...")
-        } catch (e: Exception) {
-            Log.e(TAG, "Failed to reload configurations", e)
-            showToast("Configuration reload failed: ${e.message}")
+    private fun updateSpinnerSelection(description: String) {
+        val configs = viewModel.getAllAudioConfigs()
+        val index = configs.indexOfFirst { it.description == description }
+        if (index >= 0 && index != configSpinner.selectedItemPosition) {
+            isSpinnerInitialized = false
+            configSpinner.setSelection(index)
         }
     }
 
@@ -189,23 +177,53 @@ class MainActivity : AppCompatActivity() {
             RecorderState.IDLE -> {
                 startButton.isEnabled = true
                 stopButton.isEnabled = false
-                configButton.isEnabled = true
+                configSpinner.isEnabled = true
             }
             RecorderState.RECORDING -> {
                 startButton.isEnabled = false
                 stopButton.isEnabled = true
-                configButton.isEnabled = false  // Disable configuration changes during recording
+                configSpinner.isEnabled = false  // Disable configuration changes during recording
             }
             RecorderState.ERROR -> {
                 startButton.isEnabled = true
                 stopButton.isEnabled = false
-                configButton.isEnabled = true
+                configSpinner.isEnabled = true
             }
         }
     }
 
-    private fun hasAudioPermission(): Boolean = 
-        ContextCompat.checkSelfPermission(this, Manifest.permission.RECORD_AUDIO) == PackageManager.PERMISSION_GRANTED
+    /**
+     * Handle audio recording errors
+     */
+    @SuppressLint("SetTextI18n")
+    private fun handleError(error: String) {
+        Log.e(TAG, "Audio recording error: $error")
+        showToast("Recording error: $error")
+        statusText.text = "Error: $error"
+        
+        // Reset recorder state
+        updateButtonStates(RecorderState.ERROR)
+    }
+    
+    /**
+     * Reload configuration file
+     */
+    private fun reloadConfigurations() {
+        try {
+            viewModel.reloadConfigurations()
+            showToast("Configuration reloaded successfully")
+            // Refresh spinner after reload
+            isSpinnerInitialized = false
+            setupConfigSpinner()
+        } catch (e: Exception) {
+            Log.e(TAG, "Failed to reload configurations", e)
+            showToast("Configuration reload failed: ${e.message}")
+        }
+    }
+
+    private fun hasAudioPermission(): Boolean {
+        return ContextCompat.checkSelfPermission(this, Manifest.permission.RECORD_AUDIO) == PackageManager.PERMISSION_GRANTED
+    }
 
     private fun requestAudioPermission() {
         if (ActivityCompat.shouldShowRequestPermissionRationale(this, Manifest.permission.RECORD_AUDIO)) {
@@ -223,7 +241,11 @@ class MainActivity : AppCompatActivity() {
         }
     }
 
-    override fun onRequestPermissionsResult(requestCode: Int, permissions: Array<out String>, grantResults: IntArray) {
+    override fun onRequestPermissionsResult(
+        requestCode: Int,
+        permissions: Array<out String>,
+        grantResults: IntArray
+    ) {
         super.onRequestPermissionsResult(requestCode, permissions, grantResults)
         
         if (requestCode == PERMISSION_REQUEST_CODE && grantResults.isNotEmpty()) {

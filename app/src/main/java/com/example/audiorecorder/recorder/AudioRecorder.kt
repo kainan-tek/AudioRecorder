@@ -35,13 +35,19 @@ class AudioRecorder(private val context: Context) {
         private const val TAG = "AudioRecorder"
     }
 
+    // Recording components
     private var audioRecord: AudioRecord? = null
     private var waveFile: WaveFile? = null
+    
+    // Recording state
     private val isRecording = AtomicBoolean(false)
     private var recordingJob: Job? = null
     private val recordingScope = CoroutineScope(Dispatchers.IO)
+    
+    // Audio configuration
     private var currentConfig: AudioConfig = AudioConfig()
 
+    // Recording listener
     interface RecordingListener {
         fun onRecordingStarted()
         fun onRecordingStopped()
@@ -54,6 +60,9 @@ class AudioRecorder(private val context: Context) {
         this.listener = listener
     }
     
+    /**
+     * Set audio configuration
+     */
     fun setAudioConfig(config: AudioConfig) {
         if (isRecording.get()) {
             Log.w(TAG, "Cannot change configuration while recording")
@@ -61,21 +70,38 @@ class AudioRecorder(private val context: Context) {
         }
         currentConfig = config
         Log.i(TAG, "Configuration updated: ${config.description}")
+        Log.d(TAG, getDetailedInfo())
     }
 
+    /**
+     * Start audio recording
+     */
     fun startRecording(): Boolean {
+        Log.d(TAG, "Starting recording")
+        
         if (isRecording.get()) {
+            Log.i(TAG, "Already recording, stopping current recording first")
             stopRecording()
         }
 
         return try {
-            if (createOutputFile() && initializeAudioRecord()) {
-                isRecording.set(true)
-                startRecordingLoop()
-                listener?.onRecordingStarted()
-                Log.i(TAG, "Recording started successfully")
-                true
-            } else false
+            // Create output file
+            if (!createOutputFile()) {
+                return false
+            }
+            
+            // Initialize recorder
+            if (!initializeAudioRecord()) {
+                return false
+            }
+            
+            // Start recording
+            isRecording.set(true)
+            startRecordingLoop()
+            listener?.onRecordingStarted()
+            
+            Log.i(TAG, "Recording started successfully")
+            true
         } catch (e: SecurityException) {
             handleError("Recording permission denied: ${e.message}")
             false
@@ -85,13 +111,21 @@ class AudioRecorder(private val context: Context) {
         }
     }
 
+    /**
+     * Stop recording
+     */
     fun stopRecording() {
-        if (!isRecording.get()) return
+        Log.d(TAG, "Stopping recording")
+        
+        if (!isRecording.get()) {
+            return
+        }
 
         isRecording.set(false)
         recordingJob?.cancel()
         releaseResources()
         listener?.onRecordingStopped()
+        
         Log.i(TAG, "Recording stopped")
     }
 
@@ -113,15 +147,30 @@ class AudioRecorder(private val context: Context) {
         val outputPath = currentConfig.audioFilePath.takeIf { it.isNotEmpty() } 
             ?: generateOutputFilePath()
         
-        waveFile = WaveFile(outputPath)
-        val channelCount = currentConfig.channelCount // Directly use channel count from configuration
-        val bitsPerSample = currentConfig.audioFormat
-        
-        return if (waveFile!!.create(currentConfig.sampleRate, channelCount, bitsPerSample)) {
-            Log.d(TAG, "Output file created: $outputPath (${channelCount} channels)")
-            true
-        } else {
-            handleError("Cannot create output file: $outputPath")
+        return try {
+            waveFile = WaveFile(outputPath)
+            val channelCount = currentConfig.channelCount // Directly use channel count from configuration
+            val bitsPerSample = currentConfig.audioFormat
+            
+            if (waveFile!!.create(currentConfig.sampleRate, channelCount, bitsPerSample)) {
+                Log.d(TAG, "Output file created: $outputPath (${channelCount} channels)")
+                true
+            } else {
+                val file = File(outputPath)
+                val parentDir = file.parentFile
+                val errorMsg = if (parentDir != null && !parentDir.canWrite()) {
+                    "No write permission for directory: ${parentDir.absolutePath}"
+                } else {
+                    "Cannot create output file: $outputPath"
+                }
+                handleError(errorMsg)
+                false
+            }
+        } catch (e: SecurityException) {
+            handleError("Permission denied when creating file: $outputPath - ${e.message}")
+            false
+        } catch (e: Exception) {
+            handleError("Failed to create output file: $outputPath - ${e.message}")
             false
         }
     }
@@ -268,6 +317,7 @@ class AudioRecorder(private val context: Context) {
      * Handle errors consistently
      */
     private fun handleError(message: String) {
+        isRecording.set(false)  // Stop recording on error
         Log.e(TAG, "Error: $message")
         listener?.onRecordingError(message)
         releaseResources()
@@ -280,5 +330,20 @@ class AudioRecorder(private val context: Context) {
         val bitsPerSample = currentConfig.audioFormat
         val fileName = "recording_${currentConfig.sampleRate}Hz_${channelCount}ch_${bitsPerSample}bit_${dateTime}.wav"
         return File(context.filesDir, fileName).absolutePath
+    }
+
+    /**
+     * Get detailed configuration information
+     */
+    fun getDetailedInfo(): String {
+        return buildString {
+            appendLine("Configuration: ${currentConfig.description}")
+            appendLine("Audio Source: ${currentConfig.audioSource}")
+            appendLine("Sample Rate: ${currentConfig.sampleRate}Hz")
+            appendLine("Channel Count: ${currentConfig.channelCount}")
+            appendLine("Audio Format: ${currentConfig.audioFormat}bit")
+            appendLine("Buffer Multiplier: ${currentConfig.bufferMultiplier}x")
+            appendLine("Output File: ${currentConfig.audioFilePath}")
+        }.trim()
     }
 }

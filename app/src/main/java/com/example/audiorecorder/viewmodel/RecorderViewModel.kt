@@ -14,11 +14,13 @@ import kotlinx.coroutines.launch
 
 /**
  * Recorder ViewModel, manages UI state and recording logic
+ * Supports loading audio configuration from external JSON files
  */
 class RecorderViewModel(application: Application) : AndroidViewModel(application) {
     
     private val audioRecorder = AudioRecorder(application.applicationContext)
     
+    // UI state
     private val _recorderState = MutableLiveData(RecorderState.IDLE)
     val recorderState: LiveData<RecorderState> = _recorderState
     
@@ -39,6 +41,9 @@ class RecorderViewModel(application: Application) : AndroidViewModel(application
         _statusMessage.value = getString(R.string.ready_to_record)
     }
 
+    /**
+     * Load configuration files
+     */
     private fun loadConfigurations() {
         viewModelScope.launch(Dispatchers.IO) {
             val configs = AudioConfig.loadConfigs(getApplication())
@@ -54,6 +59,9 @@ class RecorderViewModel(application: Application) : AndroidViewModel(application
         }
     }
 
+    /**
+     * Reload configuration files
+     */
     fun reloadConfigurations() {
         if (_recorderState.value == RecorderState.RECORDING) {
             updateUI({
@@ -93,9 +101,22 @@ class RecorderViewModel(application: Application) : AndroidViewModel(application
     fun startRecording() {
         if (_recorderState.value == RecorderState.RECORDING) return
         
-        _statusMessage.value = getString(R.string.status_preparing)
+        updateUI({
+            _statusMessage.value = getString(R.string.status_preparing)
+        })
+        
         viewModelScope.launch(Dispatchers.IO) {
-            audioRecorder.startRecording()
+            val success = audioRecorder.startRecording()
+            if (!success) {
+                // If startRecording returns false, error should already be reported via listener
+                // But ensure UI is in correct state
+                updateUI({
+                    if (_recorderState.value != RecorderState.ERROR) {
+                        _recorderState.value = RecorderState.ERROR
+                        _statusMessage.value = getString(R.string.error_recording_failed)
+                    }
+                }, clearError = false)
+            }
         }
     }
 
@@ -108,8 +129,10 @@ class RecorderViewModel(application: Application) : AndroidViewModel(application
     
     fun setAudioConfig(config: AudioConfig) {
         audioRecorder.setAudioConfig(config)
-        _currentConfig.value = config
-        _statusMessage.value = "Configuration updated: ${config.description}"
+        updateUI({
+            _currentConfig.value = config
+            _statusMessage.value = "Configuration updated: ${config.description}"
+        })
     }
     
     fun getAllAudioConfigs(): List<AudioConfig> = _availableConfigs.value ?: emptyList()
@@ -140,7 +163,7 @@ class RecorderViewModel(application: Application) : AndroidViewModel(application
                     _recorderState.value = RecorderState.ERROR
                     _statusMessage.value = getString(R.string.error_recording_failed)
                     _errorMessage.value = error
-                })
+                }, clearError = false)
             }
         })
     }

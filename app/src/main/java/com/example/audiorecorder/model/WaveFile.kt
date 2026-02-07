@@ -74,6 +74,10 @@ class WaveFile(private val filePath: String) {
             
             Log.i(TAG, "WAV file created successfully: ${sampleRate}Hz, ${getChannelDescription()}ch, ${bitsPerSample}bit")
             true
+        } catch (e: SecurityException) {
+            Log.e(TAG, "Permission denied when creating file: $filePath", e)
+            close()
+            false
         } catch (e: IOException) {
             Log.e(TAG, "Failed to create file: $filePath", e)
             close()
