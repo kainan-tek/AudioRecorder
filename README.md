@@ -398,9 +398,9 @@ adb shell ls -la /data/data/com.example.audiorecorder/files/
 
 ## 🔗 相关项目
 
-- **AudioPlayer**: 配套的音频播放应用，基于AudioTrack API
-- **AAudioRecorder**: 基于AAudio API的高性能录音器（独立项目）
-- **AAudioPlayer**: 基于AAudio API的播放器（独立项目）
+- [**AudioPlayer**](https://github.com/kainan-tek/AudioPlayer) - 配套的音频播放应用，基于AudioTrack API
+- [**AAudioRecorder**](https://github.com/kainan-tek/AAudioRecorder) - 基于AAudio API的高性能录音器（独立项目）
+- [**AAudioPlayer**](https://github.com/kainan-tek/AAudioPlayer) - 基于AAudio API的播放器（独立项目）
 
 ## 📄 许可证
 

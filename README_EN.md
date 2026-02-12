@@ -399,9 +399,9 @@ adb shell ls -la /data/data/com.example.audiorecorder/files/
 
 ## 🔗 Related Projects
 
-- **AudioPlayer**: Companion audio playback app based on AudioTrack API
-- **AAudioRecorder**: High-performance recorder based on AAudio API (standalone project)
-- **AAudioPlayer**: Player based on AAudio API (standalone project)
+- [**AudioPlayer**](https://github.com/kainan-tek/AudioPlayer) - Companion audio playback app based on AudioTrack API
+- [**AAudioRecorder**](https://github.com/kainan-tek/AAudioRecorder) - High-performance recorder based on AAudio API (standalone project)
+- [**AAudioPlayer**](https://github.com/kainan-tek/AAudioPlayer) - Player based on AAudio API (standalone project)
 
 ## 📄 License
 
