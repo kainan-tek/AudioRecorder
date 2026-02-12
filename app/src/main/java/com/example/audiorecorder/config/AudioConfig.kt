@@ -14,7 +14,7 @@ data class AudioConfig(
     val audioSource: String = "MIC",
     val sampleRate: Int = 48000,
     val channelCount: Int = 2, // Channel count (1-16)
-    val audioFormat: Int = 16, // Bit depth: 8, 16, 24, 32
+    val audioFormat: Int = 16, // A bit of depth: 8, 16, 24, 32
     val bufferMultiplier: Int = 2,
     val audioFilePath: String = AudioConstants.DEFAULT_AUDIO_FILE,
     val description: String = "Default recording configuration"

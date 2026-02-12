@@ -56,20 +56,27 @@ object AudioConstants {
     }
     
     // ============ Utility Functions ============
-    
     /**
-     * Get audio source integer value from string
+     * Get audio source integer value from string.
      */
-    fun getAudioSource(audioSource: String): Int {
-        val result = AudioSource.MAP.entries.find { it.value == audioSource.uppercase() }?.key ?: MediaRecorder.AudioSource.MIC
-        if (result == MediaRecorder.AudioSource.MIC && audioSource.isNotEmpty() && audioSource.uppercase() != "MIC") {
-            android.util.Log.w("AudioConstants", "Unknown AudioSource value: $audioSource, using MIC")
+    fun getAudioSource(audioSource: String): Int =
+        parseEnumValue(AudioSource.MAP, audioSource, MediaRecorder.AudioSource.MIC, "AudioSource")
+
+    /**
+     * Generic enum value parser with error handling.
+     * Keeps the same behavior style as AudioPlayer.AudioConstants.
+     */
+    @Suppress("SameParameterValue")
+    private fun parseEnumValue(map: Map<Int, String>, value: String, default: Int, typeName: String = ""): Int {
+        val result = map.entries.find { it.value == value.uppercase() }?.key ?: default
+        if (result == default && value.isNotEmpty()) {
+            android.util.Log.w("AudioConstants", "Unknown $typeName value: $value, using default")
         }
         return result
     }
 
     /**
-     * Get audio format from bit depth, supporting multiple bit depths
+     * Get audio format from bit depth, supporting multiple bit depths.
      */
     fun getFormatFromBitDepth(bitsPerSample: Int): Int {
         val audioFormats = mapOf(
@@ -86,21 +93,40 @@ object AudioConstants {
     }
 
     /**
-     * Generate channel mask based on channel count
+     * Generate input channel mask based on channel count.
+     * Uses a predefined mapping table similar to AudioPlayer.AudioConstants.
+     * For unsupported counts, falls back to stereo and logs a warning.
      */
     fun getChannelMask(channelCount: Int): Int {
-        return when (channelCount) {
-            1 -> AudioFormat.CHANNEL_IN_MONO
-            2 -> AudioFormat.CHANNEL_IN_STEREO
-            in 3..16 -> {
-                // For other multi-channel configurations, use bit mask to build channel configuration
-                var mask = 0
-                for (i in 0 until channelCount) {
-                    mask = mask or (1 shl i)
-                }
-                mask
-            }
-            else -> AudioFormat.CHANNEL_IN_STEREO
+        val channelMasks = mapOf(
+            1 to AudioFormat.CHANNEL_IN_MONO,
+            2 to AudioFormat.CHANNEL_IN_STEREO,
+            // Automotive microphone arrays: 6 / 8 / 10 / 12 channels
+            // Use an index-style mask with the lowest N bits set
+//            6 to buildIndexedChannelMask(6),
+//            8 to buildIndexedChannelMask(8),
+//            10 to buildIndexedChannelMask(10),
+//            12 to buildIndexedChannelMask(12)
+        )
+
+        return channelMasks[channelCount] ?: run {
+            android.util.Log.w(
+                "AudioConstants",
+                "Unsupported input channel count: $channelCount, using CHANNEL_IN_STEREO"
+            )
+            AudioFormat.CHANNEL_IN_STEREO
         }
     }
+
+    /**
+     * Build a simple index-style input channel mask:
+     * channels 0.(count-1) mapped to the lowest bits.
+     */
+//    private fun buildIndexedChannelMask(count: Int): Int {
+//        var mask = 0
+//        for (i in 0 until count) {
+//            mask = mask or (1 shl i)
+//        }
+//        return mask
+//    }
 }
