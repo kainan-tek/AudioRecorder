@@ -18,7 +18,7 @@ AudioRecorder是一个专为Android平台设计的音频录制测试工具，使
 - **🛠️ 动态配置系统**: 运行时切换录音配置，支持外部JSON配置文件
 - **📝 智能命名**: 自动生成带时间戳的录音文件名
 - **🏗️ MVVM架构**: 清晰的代码结构和模块化设计
-- **🔊 多声道支持**: 支持1-16声道录音
+- **🔊 多声道支持**: 支持1-16声道录音，需要修改getChannelMask以及底软支持
 
 ## 🚀 快速开始
 
@@ -31,6 +31,8 @@ AudioRecorder是一个专为Android平台设计的音频录制测试工具，使
 ### 权限要求
 
 - `RECORD_AUDIO`: 录音权限 (核心功能必需)
+- `READ_EXTERNAL_STORAGE`: 读取外部存储权限 (Android 12及以下，用于读取配置文件)
+- `WRITE_EXTERNAL_STORAGE`: 写入外部存储权限 (Android 9及以下，用于保存录音文件)
 
 ### 安装步骤
 
@@ -79,20 +81,20 @@ AudioRecorder是一个专为Android平台设计的音频录制测试工具，使
 ## 🎙️ 音频格式支持
 
 ### 声道配置
-| 声道数  | 配置名称        | 说明            | 应用场景                    |
-|------|-------------|---------------|---------------------------|
-| 1    | 单声道         | Mono          | 语音录制、通话录音               |
-| 2    | 立体声         | Stereo        | 标准录音、音乐录制               |
-| 4    | 四声道         | Quad          | 专业录音、环境声录制              |
-| 6    | 5.1声道       | 5.1 Surround  | 多声道录音、影视制作              |
-| 8    | 7.1声道       | 7.1 Surround  | 高端录音设备、专业制作             |
-| 1-16 | 其他配置        | 自动映射          | 根据声道数自动选择最佳配置           |
+| 声道数  | 配置名称  | 说明           | 应用场景          |
+|------|-------|--------------|---------------|
+| 1    | 单声道   | Mono         | 语音录制、通话录音     |
+| 2    | 立体声   | Stereo       | 标准录音、音乐录制     |
+| 4    | 四声道   | Quad         | 专业录音、环境声录制    |
+| 6    | 5.1声道 | 5.1 Surround | 多声道录音、影视制作    |
+| 8    | 7.1声道 | 7.1 Surround | 高端录音设备、专业制作   |
+| 1-16 | 其他配置  | 自动映射         | 根据声道数自动选择最佳配置 |
 
 ### 音频参数
 - **采样率**: 8kHz - 192kHz (常用: 16kHz, 48kHz)
 - **位深度**: 8/16/24/32 bit  
 - **格式**: WAV (PCM)
-- **最大声道**: 16声道
+- **最大声道**: 16声道，需要修改getChannelMask以及底软支持
 - **配置系统**: 支持多种音频源和缓冲区配置
 
 ## 🎙️ 15种预设配置场景
@@ -117,6 +119,7 @@ AudioRecorder是一个专为Android平台设计的音频录制测试工具，使
 15. **超声波录音** - 超声波频率录音 (48kHz单声道，需系统权限)
 
 > **重要说明**: 系统级音频源需要相应的系统权限，普通第三方应用无法使用这些音频源。
+
 ## 🔧 配置文件
 
 ### 配置位置
@@ -205,7 +208,6 @@ recording_[sampleRate]Hz_[channels]ch_[bitDepth]bit_[timestamp].wav
 **示例文件名:**
 - `recording_16000Hz_2ch_16bit_20240124_143052.wav`
 - `recording_48000Hz_1ch_16bit_20240124_143052.wav`
-- `recording_44100Hz_2ch_24bit_20240124_143052.wav`
 
 ### 文件存储位置
 
@@ -313,16 +315,14 @@ class RecorderViewModel : ViewModel() {
 ### AudioConfig 类
 ```kotlin
 data class AudioConfig(
-    val audioSource: Int,                                        // 音频源
+    val audioSource: String,                                     // 音频源名称
     val sampleRate: Int,                                         // 采样率
     val channelCount: Int,                                       // 声道数
-    val audioFormat: Int,                                        // 音频格式
+    val audioFormat: Int,                                        // 音频格式 (位深度)
     val bufferMultiplier: Int,                                   // 缓冲区倍数
     val audioFilePath: String,                                   // 音频文件路径
     val description: String                                      // 配置描述
 ) {
-    val channelMask: Int                                         // 声道掩码
-    
     companion object {
         fun loadConfigs(context: Context): List<AudioConfig>     // 加载配置
         fun reloadConfigs(context: Context): List<AudioConfig>   // 重新加载配置
@@ -391,7 +391,7 @@ adb shell ls -la /data/data/com.example.audiorecorder/files/
 - **采样率**: 8kHz - 192kHz (常用: 16kHz语音, 48kHz专业)
 - **声道数**: 1-16声道
 - **位深度**: 8/16/24/32位
-- **缓冲区**: 可配置缓冲区倍数 (1-8倍)
+- **缓冲区**: 可配置缓冲区倍数 (推荐: 1-3倍)
 - **支持格式**: WAV (PCM)
 - **最大录制时长**: 受设备存储限制
 - **实时性能**: 支持连续长时间录制

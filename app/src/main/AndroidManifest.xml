@@ -1,18 +1,15 @@
 <?xml version="1.0" encoding="utf-8"?>
 <manifest xmlns:android="http://schemas.android.com/apk/res/android"
-    xmlns:tools="http://schemas.android.com/tools"
     package="com.example.audiorecorder">
 
     <!-- Recording permission - Required for core app functionality -->
     <uses-permission android:name="android.permission.RECORD_AUDIO" />
     
-    <!-- Storage permissions - For saving recorded audio files -->
-    <!-- Android 13 (API 33) and above -->
-    <uses-permission android:name="android.permission.READ_MEDIA_AUDIO" tools:targetApi="33" />
-    <!-- Android 12 (API 32) and below -->
-    <uses-permission android:name="android.permission.READ_EXTERNAL_STORAGE" android:maxSdkVersion="32" />
-    <uses-permission android:name="android.permission.WRITE_EXTERNAL_STORAGE" android:maxSdkVersion="28"
-        tools:ignore="ScopedStorage" />
+    <!-- Storage permissions for reading config and saving recordings to external storage -->
+    <uses-permission android:name="android.permission.READ_EXTERNAL_STORAGE"
+        android:maxSdkVersion="32" />
+    <uses-permission android:name="android.permission.WRITE_EXTERNAL_STORAGE"
+        android:maxSdkVersion="28" />
 
     <!-- Declare that the app requires microphone feature -->
     <uses-feature android:name="android.hardware.microphone" android:required="true" />
@@ -25,7 +22,8 @@
         android:label="@string/app_name"
         android:roundIcon="@mipmap/ic_launcher_round"
         android:supportsRtl="true"
-        android:theme="@style/Theme.AudioRecorder">
+        android:theme="@style/Theme.AudioRecorder"
+        android:requestLegacyExternalStorage="true">
         <activity
             android:name=".MainActivity"
             android:exported="true">

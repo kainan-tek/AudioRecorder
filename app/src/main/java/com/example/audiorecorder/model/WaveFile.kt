@@ -75,7 +75,7 @@ class WaveFile(private val filePath: String) {
             Log.i(TAG, "WAV file created successfully: ${sampleRate}Hz, ${getChannelDescription()}ch, ${bitsPerSample}bit")
             true
         } catch (e: SecurityException) {
-            Log.e(TAG, "Permission denied when creating file: $filePath", e)
+            Log.e(TAG, "Permission denied when creating file: $filePath")
             close()
             false
         } catch (e: IOException) {
@@ -103,7 +103,7 @@ class WaveFile(private val filePath: String) {
             totalAudioLength += length
             true
         } catch (e: IOException) {
-            Log.e(TAG, "Failed to write data", e)
+            Log.e(TAG, "Failed to write data")
             close()
             false
         }
@@ -123,7 +123,7 @@ class WaveFile(private val filePath: String) {
                 }
                 return true
             } catch (e: IOException) {
-                Log.e(TAG, "Failed to close file", e)
+                Log.e(TAG, "Failed to close file")
                 return false
             } finally {
                 fileOutputStream = null
@@ -213,15 +213,13 @@ class WaveFile(private val filePath: String) {
         try {
             RandomAccessFile(File(filePath), "rw").use { raf ->
                 val totalDataLength = totalAudioLength + WAV_HEADER_SIZE - 8
-                // Update total file size
                 raf.seek(4)
                 raf.write(createLittleEndianInt(totalDataLength))
-                // Update audio data size
                 raf.seek(40)
                 raf.write(createLittleEndianInt(totalAudioLength))
             }
         } catch (e: IOException) {
-            Log.e(TAG, "Failed to update WAV header", e)
+            Log.e(TAG, "Failed to update WAV header")
         }
     }
 

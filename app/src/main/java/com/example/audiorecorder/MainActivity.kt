@@ -4,6 +4,7 @@ import android.Manifest
 import android.annotation.SuppressLint
 import android.app.AlertDialog
 import android.content.pm.PackageManager
+import android.os.Build
 import android.os.Bundle
 import android.util.Log
 import android.view.View
@@ -44,7 +45,7 @@ class MainActivity : AppCompatActivity() {
         initViews()
         initViewModel()
         setupClickListeners()
-        if (!hasAudioPermission()) requestAudioPermission()
+        if (!hasRequiredPermissions()) requestRequiredPermissions()
     }
 
     private fun initViews() {
@@ -89,8 +90,8 @@ class MainActivity : AppCompatActivity() {
 
     private fun setupClickListeners() {
         startButton.setOnClickListener {
-            if (!hasAudioPermission()) {
-                requestAudioPermission()
+            if (!hasRequiredPermissions()) {
+                requestRequiredPermissions()
                 return@setOnClickListener
             }
             viewModel.startRecording()
@@ -193,16 +194,50 @@ class MainActivity : AppCompatActivity() {
     }
 
     /**
-     * Handle audio recording errors
+     * Handle audio recording errors with user-friendly messages
      */
     @SuppressLint("SetTextI18n")
     private fun handleError(error: String) {
         Log.e(TAG, "Audio recording error: $error")
-        showToast("Recording error: $error")
-        statusText.text = "Error: $error"
         
-        // Reset recorder state
+        val userMessage = getUserFriendlyErrorMessage(error)
+        
+        AlertDialog.Builder(this)
+            .setTitle("Recording Error")
+            .setMessage(userMessage)
+            .setPositiveButton("OK") { dialog, _ ->
+                dialog.dismiss()
+                viewModel.clearError()
+            }
+            .setCancelable(true)
+            .setOnCancelListener {
+                viewModel.clearError()
+            }
+            .show()
+        
+        statusText.text = "Error: $userMessage"
         updateButtonStates(RecorderState.ERROR)
+    }
+    
+    /**
+     * Convert technical error message to user-friendly message
+     */
+    private fun getUserFriendlyErrorMessage(error: String): String {
+        return when {
+            error.startsWith("[FILE]", ignoreCase = true) -> 
+                "Unable to create recording file. Please check storage permissions and available space."
+            
+            error.startsWith("[STREAM]", ignoreCase = true) -> 
+                "Audio system initialization failed. Please try again."
+            
+            error.startsWith("[PERMISSION]", ignoreCase = true) -> 
+                "Microphone access permission is required. Please grant the permission in Settings."
+            
+            error.startsWith("[PARAM]", ignoreCase = true) -> 
+                "Invalid audio configuration. Please select a different configuration."
+            
+            else -> "Recording failed. Please try again."
+        }
     }
     
     /**
@@ -221,23 +256,60 @@ class MainActivity : AppCompatActivity() {
         }
     }
 
-    private fun hasAudioPermission(): Boolean {
-        return ContextCompat.checkSelfPermission(this, Manifest.permission.RECORD_AUDIO) == PackageManager.PERMISSION_GRANTED
+    /**
+     * Get required permissions for recording
+     */
+    @SuppressLint("ObsoleteSdkInt")
+    private fun getRequiredPermissions(): Array<String> {
+        return when {
+            Build.VERSION.SDK_INT <= Build.VERSION_CODES.P -> {
+                arrayOf(
+                    Manifest.permission.RECORD_AUDIO,
+                    Manifest.permission.READ_EXTERNAL_STORAGE,
+                    Manifest.permission.WRITE_EXTERNAL_STORAGE
+                )
+            }
+            Build.VERSION.SDK_INT <= Build.VERSION_CODES.S_V2 -> {
+                arrayOf(
+                    Manifest.permission.RECORD_AUDIO,
+                    Manifest.permission.READ_EXTERNAL_STORAGE
+                )
+            }
+            else -> {
+                arrayOf(Manifest.permission.RECORD_AUDIO)
+            }
+        }
     }
 
-    private fun requestAudioPermission() {
-        if (ActivityCompat.shouldShowRequestPermissionRationale(this, Manifest.permission.RECORD_AUDIO)) {
-            // Show explanation dialog
+    /**
+     * Check if all required permissions are granted
+     */
+    private fun hasRequiredPermissions(): Boolean {
+        return getRequiredPermissions().all {
+            ContextCompat.checkSelfPermission(this, it) == PackageManager.PERMISSION_GRANTED
+        }
+    }
+
+    /**
+     * Request required permissions
+     */
+    private fun requestRequiredPermissions() {
+        val permissions = getRequiredPermissions()
+        val deniedPermissions = permissions.filter {
+            ActivityCompat.shouldShowRequestPermissionRationale(this, it)
+        }
+
+        if (deniedPermissions.isNotEmpty()) {
             AlertDialog.Builder(this)
                 .setTitle("Permission Required")
-                .setMessage("This app needs microphone access permission to record audio.")
+                .setMessage("This app needs microphone and storage access permissions to record and save audio files.")
                 .setPositiveButton("Grant") { _, _ ->
-                    ActivityCompat.requestPermissions(this, arrayOf(Manifest.permission.RECORD_AUDIO), PERMISSION_REQUEST_CODE)
+                    ActivityCompat.requestPermissions(this, permissions, PERMISSION_REQUEST_CODE)
                 }
                 .setNegativeButton("Cancel", null)
                 .show()
         } else {
-            ActivityCompat.requestPermissions(this, arrayOf(Manifest.permission.RECORD_AUDIO), PERMISSION_REQUEST_CODE)
+            ActivityCompat.requestPermissions(this, permissions, PERMISSION_REQUEST_CODE)
         }
     }
 
@@ -249,10 +321,12 @@ class MainActivity : AppCompatActivity() {
         super.onRequestPermissionsResult(requestCode, permissions, grantResults)
         
         if (requestCode == PERMISSION_REQUEST_CODE && grantResults.isNotEmpty()) {
-            val message = if (grantResults[0] == PackageManager.PERMISSION_GRANTED) {
+            val allGranted = grantResults.all { it == PackageManager.PERMISSION_GRANTED }
+            val message = if (allGranted) {
                 getString(R.string.permission_granted)
             } else {
-                getString(R.string.permission_required)
+                val deniedCount = grantResults.count { it != PackageManager.PERMISSION_GRANTED }
+                "${getString(R.string.permission_required)} ($deniedCount permission(s) denied)"
             }
             showToast(message)
         }

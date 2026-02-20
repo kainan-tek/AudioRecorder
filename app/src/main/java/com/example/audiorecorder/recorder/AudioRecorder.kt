@@ -56,7 +56,7 @@ class AudioRecorder(private val context: Context) {
 
     private var listener: RecordingListener? = null
 
-    fun setRecordingListener(listener: RecordingListener) {
+    fun setRecordingListener(listener: RecordingListener?) {
         this.listener = listener
     }
     
@@ -103,10 +103,10 @@ class AudioRecorder(private val context: Context) {
             Log.i(TAG, "Recording started successfully")
             true
         } catch (e: SecurityException) {
-            handleError("Recording permission denied: ${e.message}")
+            handleError("[PERMISSION] Recording permission denied: ${e.message}")
             false
         } catch (e: Exception) {
-            handleError("Recording initialization failed: ${e.message}")
+            handleError("[STREAM] Recording initialization failed: ${e.message}")
             false
         }
     }
@@ -159,18 +159,18 @@ class AudioRecorder(private val context: Context) {
                 val file = File(outputPath)
                 val parentDir = file.parentFile
                 val errorMsg = if (parentDir != null && !parentDir.canWrite()) {
-                    "No write permission for directory: ${parentDir.absolutePath}"
+                    "[FILE] No write permission for directory: ${parentDir.absolutePath}"
                 } else {
-                    "Cannot create output file: $outputPath"
+                    "[FILE] Cannot create output file: $outputPath"
                 }
                 handleError(errorMsg)
                 false
             }
         } catch (e: SecurityException) {
-            handleError("Permission denied when creating file: $outputPath - ${e.message}")
+            handleError("[PERMISSION] Permission denied when creating file: $outputPath - ${e.message}")
             false
         } catch (e: Exception) {
-            handleError("Failed to create output file: $outputPath - ${e.message}")
+            handleError("[FILE] Failed to create output file: $outputPath - ${e.message}")
             false
         }
     }
@@ -185,7 +185,7 @@ class AudioRecorder(private val context: Context) {
                 AudioConstants.getFormatFromBitDepth(currentConfig.audioFormat)
             )
             if (minBufferSize <= 0) {
-                handleError("Unsupported audio parameter combination")
+                handleError("[PARAM] Unsupported audio parameter combination")
                 return false
             }
             
@@ -205,17 +205,17 @@ class AudioRecorder(private val context: Context) {
                 .build()
 
             if (audioRecord?.state != AudioRecord.STATE_INITIALIZED) {
-                handleError("AudioRecord initialization failed")
+                handleError("[STREAM] AudioRecord initialization failed")
                 return false
             }
 
             Log.i(TAG, "AudioRecord initialized successfully - ${currentConfig.description}")
             true
         } catch (_: SecurityException) {
-            handleError("Recording permission denied")
+            handleError("[PERMISSION] Recording permission denied")
             false
         } catch (e: Exception) {
-            handleError("AudioRecord creation failed: ${e.message}")
+            handleError("[STREAM] AudioRecord creation failed: ${e.message}")
             false
         }
     }
@@ -227,15 +227,15 @@ class AudioRecorder(private val context: Context) {
         
         return when {
             sampleRate !in 8000..192000 -> {
-                handleError("Unsupported sample rate: ${sampleRate}Hz")
+                handleError("[PARAM] Unsupported sample rate: ${sampleRate}Hz")
                 false
             }
             channelCount !in 1..16 -> {
-                handleError("Unsupported channel count: $channelCount")
+                handleError("[PARAM] Unsupported channel count: $channelCount")
                 false
             }
             bitsPerSample !in listOf(8, 16, 24, 32) -> {
-                handleError("Unsupported bit depth: ${bitsPerSample}bit")
+                handleError("[PARAM] Unsupported bit depth: ${bitsPerSample}bit")
                 false
             }
             else -> true
@@ -283,11 +283,11 @@ class AudioRecorder(private val context: Context) {
                 }
             } catch (e: SecurityException) {
                 if (isRecording.get()) {
-                    handleError("Recording permission denied: ${e.message}")
+                    handleError("[PERMISSION] Recording permission denied: ${e.message}")
                 }
             } catch (e: Exception) {
                 if (isRecording.get()) {
-                    handleError("Recording error: ${e.message}")
+                    handleError("[STREAM] Recording error: ${e.message}")
                 }
             }
         }

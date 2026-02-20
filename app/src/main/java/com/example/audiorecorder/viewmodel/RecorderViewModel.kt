@@ -136,6 +136,17 @@ class RecorderViewModel(application: Application) : AndroidViewModel(application
     }
     
     fun getAllAudioConfigs(): List<AudioConfig> = _availableConfigs.value ?: emptyList()
+    
+    /**
+     * Clear error state and reset to idle
+     */
+    fun clearError() {
+        _errorMessage.value = null
+        if (_recorderState.value == RecorderState.ERROR) {
+            _recorderState.value = RecorderState.IDLE
+            _statusMessage.value = getString(R.string.ready_to_record)
+        }
+    }
 
     override fun onCleared() {
         super.onCleared()

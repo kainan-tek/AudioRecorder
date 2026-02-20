@@ -18,7 +18,7 @@ AudioRecorder is an audio recording test tool designed for the Android platform,
 - **🛠️ Dynamic Configuration System**: Runtime switching of recording configurations, external JSON config file support
 - **📝 Smart Naming**: Auto-generated recording filenames with timestamps
 - **🏗️ MVVM Architecture**: Clear code structure and modular design
-- **🔊 Multi-Channel Support**: Supports 1-16 channel recording
+- **🔊 Multi-Channel Support**: Supports 1-16 channel recording, requires modification of getChannelMask and underlying software support
 
 ## 🚀 Quick Start
 
@@ -31,6 +31,8 @@ AudioRecorder is an audio recording test tool designed for the Android platform,
 ### Permission Requirements
 
 - `RECORD_AUDIO`: Recording permission (required for core functionality)
+- `READ_EXTERNAL_STORAGE`: Read external storage permission (Android 12 and below, for reading config files)
+- `WRITE_EXTERNAL_STORAGE`: Write external storage permission (Android 9 and below, for saving recording files)
 
 ### Installation Steps
 
@@ -92,7 +94,7 @@ AudioRecorder is an audio recording test tool designed for the Android platform,
 - **Sample Rate**: 8kHz - 192kHz (Common: 16kHz, 48kHz)
 - **Bit Depth**: 8/16/24/32 bit
 - **Format**: WAV (PCM)
-- **Maximum Channels**: 16 channels
+- **Maximum Channels**: 16 channels, requires modification of getChannelMask and underlying software support
 - **Configuration System**: Supports various audio sources and buffer configurations
 
 ## 🎙️ 15 Preset Configuration Scenarios
@@ -206,7 +208,6 @@ recording_[sampleRate]Hz_[channels]ch_[bitDepth]bit_[timestamp].wav
 **Example Filenames:**
 - `recording_16000Hz_2ch_16bit_20240124_143052.wav`
 - `recording_48000Hz_1ch_16bit_20240124_143052.wav`
-- `recording_44100Hz_2ch_24bit_20240124_143052.wav`
 
 ### File Storage Location
 
@@ -314,16 +315,14 @@ class RecorderViewModel : ViewModel() {
 ### AudioConfig Class
 ```kotlin
 data class AudioConfig(
-    val audioSource: Int,                                        // Audio source
+    val audioSource: String,                                     // Audio source name
     val sampleRate: Int,                                         // Sample rate
     val channelCount: Int,                                       // Channel count
-    val audioFormat: Int,                                        // Audio format
+    val audioFormat: Int,                                        // Audio format (bit depth)
     val bufferMultiplier: Int,                                   // Buffer multiplier
     val audioFilePath: String,                                   // Audio file path
     val description: String                                      // Config description
 ) {
-    val channelMask: Int                                         // Channel mask
-    
     companion object {
         fun loadConfigs(context: Context): List<AudioConfig>     // Load configs
         fun reloadConfigs(context: Context): List<AudioConfig>   // Reload configs
@@ -392,7 +391,7 @@ adb shell ls -la /data/data/com.example.audiorecorder/files/
 - **Sample Rate**: 8kHz - 192kHz (Common: 16kHz voice, 48kHz professional)
 - **Channel Count**: 1-16 channels
 - **Bit Depth**: 8/16/24/32-bit
-- **Buffer**: Configurable buffer multiplier (1-8x)
+- **Buffer**: Configurable buffer multiplier (recommended: 1-3x)
 - **Supported Format**: WAV (PCM)
 - **Maximum Recording Duration**: Limited by device storage
 - **Real-time Performance**: Supports continuous long-duration recording
