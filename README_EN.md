@@ -18,7 +18,7 @@ AudioRecorder is an audio recording test tool designed for the Android platform,
 - **🛠️ Dynamic Configuration System**: Runtime switching of recording configurations, external JSON config file support
 - **📝 Smart Naming**: Auto-generated recording filenames with timestamps
 - **🏗️ MVVM Architecture**: Clear code structure and modular design
-- **🔊 Multi-Channel Support**: Supports 1-16 channel recording, requires modification of getChannelMask and underlying software support
+- **🔊 Multi-Channel Support**: Supports 1-16 channel recording, check getChannelMask in AudioConstants.kt, requires underlying software support
 
 ## 🚀 Quick Start
 
@@ -94,7 +94,7 @@ AudioRecorder is an audio recording test tool designed for the Android platform,
 - **Sample Rate**: 8kHz - 192kHz (Common: 16kHz, 48kHz)
 - **Bit Depth**: 8/16/24/32 bit
 - **Format**: WAV (PCM)
-- **Maximum Channels**: 16 channels, requires modification of getChannelMask and underlying software support
+- **Maximum Channels**: 16 channels
 - **Configuration System**: Supports various audio sources and buffer configurations
 
 ## 🎙️ 15 Preset Configuration Scenarios

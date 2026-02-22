@@ -101,12 +101,12 @@ object AudioConstants {
         val channelMasks = mapOf(
             1 to AudioFormat.CHANNEL_IN_MONO,
             2 to AudioFormat.CHANNEL_IN_STEREO,
-            // Automotive microphone arrays: 6 / 8 / 10 / 12 channels
-            // Use an index-style mask with the lowest N bits set
-//            6 to buildIndexedChannelMask(6),
-//            8 to buildIndexedChannelMask(8),
-//            10 to buildIndexedChannelMask(10),
-//            12 to buildIndexedChannelMask(12)
+            // Requires underlying software support
+            8 to 1020,     // 0x3FC
+            10 to 4092,    // 0xFFC
+            12 to 16380,   // 0x3FFC
+            14 to 1048572, // 0xFFFFC
+            16 to 4194300  // 0X3FFFFC
         )
 
         return channelMasks[channelCount] ?: run {
@@ -117,16 +117,4 @@ object AudioConstants {
             AudioFormat.CHANNEL_IN_STEREO
         }
     }
-
-    /**
-     * Build a simple index-style input channel mask:
-     * channels 0.(count-1) mapped to the lowest bits.
-     */
-//    private fun buildIndexedChannelMask(count: Int): Int {
-//        var mask = 0
-//        for (i in 0 until count) {
-//            mask = mask or (1 shl i)
-//        }
-//        return mask
-//    }
 }
