@@ -16,7 +16,7 @@ data class AudioConfig(
     val channelCount: Int = 2, // Channel count (1-16)
     val audioFormat: Int = 16, // A bit of depth: 8, 16, 24, 32
     val bufferMultiplier: Int = 2,
-    val audioFilePath: String = AudioConstants.DEFAULT_AUDIO_FILE,
+    val audioFilePath: String = "",
     val description: String = "Default recording configuration"
 ) {
     companion object {
@@ -60,7 +60,7 @@ data class AudioConfig(
                     channelCount = config.optInt("channelCount", 2),
                     audioFormat = config.optInt("audioFormat", 16),
                     bufferMultiplier = config.optInt("bufferMultiplier", 2),
-                    audioFilePath = config.optString("audioFilePath", AudioConstants.DEFAULT_AUDIO_FILE),
+                    audioFilePath = config.optString("audioFilePath", ""),
                     description = config.optString("description", "Custom configuration")
                 )
             }
@@ -75,7 +75,7 @@ data class AudioConfig(
                     channelCount = 2,
                     audioFormat = 16,
                     bufferMultiplier = 2,
-                    audioFilePath = AudioConstants.DEFAULT_AUDIO_FILE,
+                    audioFilePath = "",
                     description = "Emergency Fallback - Stereo Recording"
                 )
             )

@@ -139,7 +139,7 @@ AudioRecorder is an audio recording test tool designed for the Android platform,
       "audioFormat": 16,
       "bufferMultiplier": 2,
       "audioFilePath": "/data/recorded_48k_2ch_16bit.wav",
-      "description": "Microphone recording configuration"
+      "description": "Microphone Recording (48kHz Stereo)"
     }
   ]
 }
@@ -199,21 +199,21 @@ AudioRecorder is an audio recording test tool designed for the Android platform,
 
 ### Auto-Naming Rules
 
-When `audioFilePath` in configuration is empty, the system auto-generates filename:
+When `audioFilePath` in configuration is empty, the system auto-generates a timestamped filename at recording start:
 
 ```
-recording_[sampleRate]Hz_[channels]ch_[bitDepth]bit_[timestamp].wav
+rec_YYYYMMDD_HHMMSS_[sampleRate]k_[channels]ch_[bitDepth]bit.wav
 ```
 
 **Example Filenames:**
-- `recording_16000Hz_2ch_16bit_20240124_143052.wav`
-- `recording_48000Hz_1ch_16bit_20240124_143052.wav`
+- `rec_20240124_143052_48k_1ch_16bit.wav`
+- `rec_20240124_143052_16k_2ch_16bit.wav`
 
 ### File Storage Location
 
-- **Default Location**: App private directory (`/data/data/com.example.audiorecorder/files/`)
-- **Custom Location**: Specify full path via config file
-- **External Storage**: Can configure to `/data/` directory (requires appropriate permissions)
+- **Specified Path**: Use the complete `audioFilePath` from configuration
+- **Auto Path**: Save to app's default storage directory (`getExternalFilesDir(null)`)
+- **Permission Requirement**: Ensure app has write permission
 
 ## 🏗️ Technical Architecture
 
@@ -340,6 +340,8 @@ data class AudioConfig(
    - Verify audio parameter combination support
 
 2. **Permission Issues**
+   - The app will automatically request recording permission on first run, follow the on-screen prompts
+   - If permission is denied, manually grant recording permission in system settings
    ```bash
    # For system-level audio sources, system permissions required
    adb root && adb remount && adb shell setenforce 0

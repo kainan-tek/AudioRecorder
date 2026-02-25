@@ -139,7 +139,7 @@ AudioRecorder是一个专为Android平台设计的音频录制测试工具，使
       "audioFormat": 16,
       "bufferMultiplier": 2,
       "audioFilePath": "/data/recorded_48k_2ch_16bit.wav",
-      "description": "麦克风录音配置"
+      "description": "Microphone Recording (48kHz Stereo)"
     }
   ]
 }
@@ -199,21 +199,21 @@ AudioRecorder是一个专为Android平台设计的音频录制测试工具，使
 
 ### 自动命名规则
 
-当配置中的 `audioFilePath` 为空时，系统会自动生成文件名：
+当配置中的 `audioFilePath` 为空时，系统会在录音开始时自动生成带时间戳的文件名：
 
 ```
-recording_[sampleRate]Hz_[channels]ch_[bitDepth]bit_[timestamp].wav
+rec_YYYYMMDD_HHMMSS_[sampleRate]k_[channels]ch_[bitDepth]bit.wav
 ```
 
 **示例文件名:**
-- `recording_16000Hz_2ch_16bit_20240124_143052.wav`
-- `recording_48000Hz_1ch_16bit_20240124_143052.wav`
+- `rec_20240124_143052_48k_1ch_16bit.wav`
+- `rec_20240124_143052_16k_2ch_16bit.wav`
 
 ### 文件存储位置
 
-- **默认位置**: 应用私有目录 (`/data/data/com.example.audiorecorder/files/`)
-- **自定义位置**: 通过配置文件指定完整路径
-- **外部存储**: 可配置到 `/data/` 目录 (需要相应权限)
+- **指定路径**: 使用配置中的 `audioFilePath` 完整路径
+- **自动路径**: 保存到应用默认存储目录 (`getExternalFilesDir(null)`)
+- **权限要求**: 确保应用有写入权限
 
 ## 🏗️ 技术架构
 
@@ -340,6 +340,8 @@ data class AudioConfig(
    - 验证音频参数组合是否支持
 
 2. **权限问题**
+   - 应用首次运行时会自动请求录音权限，按照屏幕提示授予
+   - 如果权限被拒绝，可在系统设置中手动授予录音权限
    ```bash
    # 对于系统级音频源，需要系统权限
    adb root && adb remount && adb shell setenforce 0

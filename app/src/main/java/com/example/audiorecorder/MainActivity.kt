@@ -29,7 +29,7 @@ class MainActivity : AppCompatActivity() {
     private lateinit var stopButton: Button
     private lateinit var configSpinner: Spinner
     private lateinit var statusText: TextView
-    private lateinit var fileInfoText: TextView
+    private lateinit var recordingInfoText: TextView
     
     private var isSpinnerInitialized = false
 
@@ -53,7 +53,7 @@ class MainActivity : AppCompatActivity() {
         stopButton = findViewById(R.id.stopButton)
         configSpinner = findViewById(R.id.configSpinner)
         statusText = findViewById(R.id.statusTextView)
-        fileInfoText = findViewById(R.id.recordingInfoTextView)
+        recordingInfoText = findViewById(R.id.recordingInfoTextView)
     }
 
     private fun initViewModel() {
@@ -358,13 +358,16 @@ class MainActivity : AppCompatActivity() {
     @SuppressLint("SetTextI18n")
     private fun updateRecordingInfo() {
         viewModel.currentConfig.value?.let { config ->
+            val filePathDisplay = config.audioFilePath.ifBlank {
+                "<App default path (auto-generated at recording start)>"
+            }
             val configInfo = "Current Config: ${config.description}\n" +
                     "Source: ${config.audioSource}\n" +
                     "Parameters: ${config.sampleRate}Hz | ${config.channelCount}ch | ${config.audioFormat}bit\n" +
-                    "File: ${config.audioFilePath}"
-            fileInfoText.text = configInfo
+                    "File: $filePathDisplay"
+            recordingInfoText.text = configInfo
         } ?: run {
-            fileInfoText.text = "Recording Info"
+            recordingInfoText.text = "Recording Info"
         }
     }
 }

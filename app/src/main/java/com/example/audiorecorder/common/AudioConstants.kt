@@ -12,8 +12,6 @@ object AudioConstants {
     // ============ File Paths ============
     const val CONFIG_FILE_PATH = "/data/audio_recorder_configs.json"
     const val ASSETS_CONFIG_FILE = "audio_recorder_configs.json"
-
-    const val DEFAULT_AUDIO_FILE = "/data/recorded_48k_2ch_16bit.wav"
     
     // ============ AudioRecord Audio Source Constants ============
     object AudioSource {

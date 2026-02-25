@@ -324,12 +324,15 @@ class AudioRecorder(private val context: Context) {
     }
     
     private fun generateOutputFilePath(): String {
+        val directory = context.getExternalFilesDir(null)?.absolutePath
+            ?: context.filesDir.absolutePath
         val dateTime = java.time.LocalDateTime.now()
             .format(java.time.format.DateTimeFormatter.ofPattern("yyyyMMdd_HHmmss"))
         val channelCount = currentConfig.channelCount
         val bitsPerSample = currentConfig.audioFormat
-        val fileName = "recording_${currentConfig.sampleRate}Hz_${channelCount}ch_${bitsPerSample}bit_${dateTime}.wav"
-        return File(context.filesDir, fileName).absolutePath
+        val sampleRateK = currentConfig.sampleRate / 1000
+        val fileName = "rec_${dateTime}_${sampleRateK}k_${channelCount}ch_${bitsPerSample}bit.wav"
+        return File(directory, fileName).absolutePath
     }
 
     /**
