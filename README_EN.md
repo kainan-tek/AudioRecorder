@@ -2,23 +2,31 @@
 
 [中文文档](README.md) | English
 
-A high-performance audio recording test application based on Android AudioRecord API, supporting 15 recording configurations and real-time WAV file writing.
+A high-performance audio recording test application based on Android AudioRecord API, supporting 15
+recording configurations and real-time WAV file writing.
 
 ## 📋 Overview
 
-AudioRecorder is an audio recording test tool designed for the Android platform, using the Android AudioRecord API. This project demonstrates how to implement high-quality audio recording in Android applications, supporting various recording scenarios and audio source types. It's an ideal tool for audio developers and test engineers.
+AudioRecorder is an audio recording test tool designed for the Android platform, using the Android
+AudioRecord API. This project demonstrates how to implement high-quality audio recording in Android
+applications, supporting various recording scenarios and audio source types. It's an ideal tool for
+audio developers and test engineers.
 
 ## ✨ Key Features
 
 - **🎙️ High-Performance Recording**: Audio recording based on AudioRecord API
-- **🔧 15 Recording Presets**: Covering microphone, voice call, camcorder, high-performance recording scenarios
+- **🔧 15 Recording Presets**: Covering microphone, voice call, camcorder, high-performance recording
+  scenarios
 - **📱 Modern UI**: Intuitive control interface with Material Design 3 style
 - **🎵 Multi-Format Support**: PCM 8-bit, 16-bit, 24-bit, 32-bit formats
-- **⚡ Real-time Processing**: Audio data written to WAV file in real-time, supports continuous recording
-- **🛠️ Dynamic Configuration System**: Runtime switching of recording configurations, external JSON config file support
+- **⚡ Real-time Processing**: Audio data written to WAV file in real-time, supports continuous
+  recording
+- **🛠️ Dynamic Configuration System**: Runtime switching of recording configurations, external JSON
+  config file support
 - **📝 Smart Naming**: Auto-generated recording filenames with timestamps
 - **🏗️ MVVM Architecture**: Clear code structure and modular design
-- **🔊 Multi-Channel Support**: Supports 1-16 channel recording, check getChannelMask in AudioConstants.kt, requires underlying software support
+- **🔊 Multi-Channel Support**: Supports 1-16 channel recording, check getChannelMask in
+  AudioConstants.kt, requires underlying software support
 
 ## 🚀 Quick Start
 
@@ -31,8 +39,10 @@ AudioRecorder is an audio recording test tool designed for the Android platform,
 ### Permission Requirements
 
 - `RECORD_AUDIO`: Recording permission (required for core functionality)
-- `READ_EXTERNAL_STORAGE`: Read external storage permission (Android 12 and below, for reading config files)
-- `WRITE_EXTERNAL_STORAGE`: Write external storage permission (Android 9 and below, for saving recording files)
+- `READ_EXTERNAL_STORAGE`: Read external storage permission (Android 12 and below, for reading
+  config files)
+- `WRITE_EXTERNAL_STORAGE`: Write external storage permission (Android 9 and below, for saving
+  recording files)
 
 ### Installation Steps
 
@@ -60,15 +70,15 @@ AudioRecorder is an audio recording test tool designed for the Android platform,
 ### Basic Operations
 
 1. **Recording Control**
-   - 🎙️ **Start Recording**: Tap the green recording button
-   - ⏹️ **Stop Recording**: Tap the red stop button
-   - ⚙️ **Recording Config**: Tap config button to switch recording settings
+    - 🎙️ **Start Recording**: Tap the green recording button
+    - ⏹️ **Stop Recording**: Tap the red stop button
+    - ⚙️ **Recording Config**: Tap config button to switch recording settings
 
 2. **Configuration Management**
-   - Auto-load configurations on app startup
-   - Support dynamic loading from external files
-   - Switch between different recording scenarios via dropdown menu at runtime
-   - Long-press config dropdown to reload external config file
+    - Auto-load configurations on app startup
+    - Support dynamic loading from external files
+    - Switch between different recording scenarios via dropdown menu at runtime
+    - Long-press config dropdown to reload external config file
 
 ### Configuration Switching Flow
 
@@ -81,16 +91,18 @@ AudioRecorder is an audio recording test tool designed for the Android platform,
 ## 🎙️ Audio Format Support
 
 ### Channel Configurations
-| Channels | Config Name    | Description   | Use Cases                           |
-|----------|----------------|---------------|-------------------------------------|
-| 1        | Mono           | Mono          | Voice recording, call recording     |
-| 2        | Stereo         | Stereo        | Standard recording, music recording |
-| 4        | Quad           | Quad          | Professional recording, ambient     |
-| 6        | 5.1 Surround   | 5.1 Surround  | Multi-channel, film production      |
-| 8        | 7.1 Surround   | 7.1 Surround  | High-end equipment, professional    |
-| 1-16     | Other Configs  | Auto-mapping  | Auto-select best config             |
+
+| Channels | Config Name   | Description  | Use Cases                           |
+|----------|---------------|--------------|-------------------------------------|
+| 1        | Mono          | Mono         | Voice recording, call recording     |
+| 2        | Stereo        | Stereo       | Standard recording, music recording |
+| 4        | Quad          | Quad         | Professional recording, ambient     |
+| 6        | 5.1 Surround  | 5.1 Surround | Multi-channel, film production      |
+| 8        | 7.1 Surround  | 7.1 Surround | High-end equipment, professional    |
+| 1-16     | Other Configs | Auto-mapping | Auto-select best config             |
 
 ### Audio Parameters
+
 - **Sample Rate**: 8kHz - 192kHz (Common: 16kHz, 48kHz)
 - **Bit Depth**: 8/16/24/32 bit
 - **Format**: WAV (PCM)
@@ -100,6 +112,7 @@ AudioRecorder is an audio recording test tool designed for the Android platform,
 ## 🎙️ 15 Preset Configuration Scenarios
 
 ### Basic Audio Sources (Available for Regular Apps)
+
 1. **Default Audio Source** - System auto-selects most suitable audio source (48kHz stereo)
 2. **Microphone Recording** - General recording scenario (48kHz stereo)
 3. **Camcorder Recording** - Video recording audio (48kHz stereo)
@@ -109,16 +122,19 @@ AudioRecorder is an audio recording test tool designed for the Android platform,
 7. **Voice Performance** - Real-time processing recording (48kHz mono)
 
 ### System-Level Audio Sources (Require Special Permissions)
-8. **Voice Call Uplink** - Voice communication send (16kHz mono, requires system permission)
-9. **Voice Call Downlink** - Voice communication receive (16kHz mono, requires system permission)
-10. **Voice Call Bidirectional** - Complete call recording (16kHz mono, requires system permission)
-11. **Remote Submix** - Internal audio stream (48kHz stereo, requires system permission)
-12. **Echo Reference Signal** - For echo cancellation (48kHz stereo, requires system permission)
-13. **Radio Tuner** - Radio station audio (48kHz stereo, requires system permission)
-14. **Hotword Detection** - Low-priority hotword detection (16kHz mono, requires system permission)
-15. **Ultrasound Recording** - Ultrasound frequency recording (48kHz mono, requires system permission)
 
-> **Important Note**: System-level audio sources require corresponding system permissions. Regular third-party apps cannot use these audio sources.
+1. **Voice Call Uplink** - Voice communication send (16kHz mono, requires system permission)
+2. **Voice Call Downlink** - Voice communication receive (16kHz mono, requires system permission)
+3. **Voice Call Bidirectional** - Complete call recording (16kHz mono, requires system permission)
+4. **Remote Submix** - Internal audio stream (48kHz stereo, requires system permission)
+5. **Echo Reference Signal** - For echo cancellation (48kHz stereo, requires system permission)
+6. **Radio Tuner** - Radio station audio (48kHz stereo, requires system permission)
+7. **Hotword Detection** - Low-priority hotword detection (16kHz mono, requires system permission)
+8. **Ultrasound Recording** - Ultrasound frequency recording (48kHz mono, requires system
+   permission)
+
+> **Important Note**: System-level audio sources require corresponding system permissions. Regular
+> third-party apps cannot use these audio sources.
 
 ## 🔧 Configuration File
 
@@ -158,6 +174,7 @@ AudioRecorder is an audio recording test tool designed for the Android platform,
 **Audio Source:**
 
 #### Basic Audio Sources (Available for Regular Apps)
+
 - `DEFAULT` - Default audio source, system auto-selects
 - `MIC` - Microphone audio source, preferred for standard recording apps
 - `CAMCORDER` - Camera recording, optimized for video recording
@@ -167,6 +184,7 @@ AudioRecorder is an audio recording test tool designed for the Android platform,
 - `UNPROCESSED` - Unprocessed audio, provides raw audio signal
 
 #### System-Level Audio Sources (Require Special Permissions)
+
 - `VOICE_UPLINK` - Voice call uplink signal (requires CAPTURE_AUDIO_OUTPUT permission)
 - `VOICE_DOWNLINK` - Voice call downlink signal (requires CAPTURE_AUDIO_OUTPUT permission)
 - `VOICE_CALL` - Voice call bidirectional signal (requires CAPTURE_AUDIO_OUTPUT permission)
@@ -177,12 +195,14 @@ AudioRecorder is an audio recording test tool designed for the Android platform,
 - `ULTRASOUND` - Ultrasound recording (requires ACCESS_ULTRASOUND permission)
 
 **Audio Format:**
+
 - `8` - 8-bit integer (basic quality, saves storage space)
 - `16` - 16-bit integer (standard quality, recommended)
 - `24` - 24-bit integer (high quality, professional recording)
 - `32` - 32-bit integer (highest quality, large storage)
 
 **Sample Rate:**
+
 - `8000` - Telephone quality (voice calls)
 - `16000` - Voice recognition standard (voice calls, recognition, hotword detection)
 - `44100` - CD quality (standard recording)
@@ -191,6 +211,7 @@ AudioRecorder is an audio recording test tool designed for the Android platform,
 - `192000` - Highest quality (ultrasound recording, special purposes)
 
 **Channel Count:**
+
 - `1` - Mono (saves space, voice recording)
 - `2` - Stereo (standard recording, music recording)
 - `4-16` - Multi-channel recording (professional use, ambient recording)
@@ -199,13 +220,15 @@ AudioRecorder is an audio recording test tool designed for the Android platform,
 
 ### Auto-Naming Rules
 
-When `audioFilePath` in configuration is empty, the system auto-generates a timestamped filename at recording start:
+When `audioFilePath` in configuration is empty, the system auto-generates a timestamped filename at
+recording start:
 
 ```
 rec_YYYYMMDD_HHMMSS_[sampleRate]k_[channels]ch_[bitDepth]bit.wav
 ```
 
 **Example Filenames:**
+
 - `rec_20240124_143052_48k_1ch_16bit.wav`
 - `rec_20240124_143052_16k_2ch_16bit.wav`
 
@@ -223,7 +246,7 @@ rec_YYYYMMDD_HHMMSS_[sampleRate]k_[channels]ch_[bitDepth]bit.wav
 - **AudioConfig**: Recording configuration management class with dynamic config loading
 - **RecorderViewModel**: MVVM architecture view model managing recording state
 - **MainActivity**: Modern main interface controller with permission management and user interaction
-- **WaveFile**: WAV file writer supporting real-time writing
+- **WavFile**: WAV file writer supporting real-time writing
 
 ### Technology Stack
 
@@ -262,7 +285,7 @@ dependencies {
 ### Data Flow Architecture
 
 ```
-Microphone → AudioRecord → Audio Buffer → WaveFile → WAV File
+Microphone → AudioRecord → Audio Buffer → WavFile → WAV File
                                 ↓
                          Kotlin Coroutine → UI State Update
 ```
@@ -286,6 +309,7 @@ Microphone → AudioRecord → Audio Buffer → WaveFile → WAV File
 ## 📚 API Reference
 
 ### AudioRecorder Class
+
 ```kotlin
 class AudioRecorder(context: Context) {
     fun setAudioConfig(config: AudioConfig)                      // Set configuration
@@ -297,13 +321,14 @@ class AudioRecorder(context: Context) {
 ```
 
 ### RecorderViewModel Class
+
 ```kotlin
 class RecorderViewModel : ViewModel() {
     val recorderState: LiveData<RecorderState>                   // Recording state
     val statusMessage: LiveData<String>                          // Status message
     val errorMessage: LiveData<String?>                          // Error message
     val currentConfig: LiveData<AudioConfig?>                    // Current config
-    
+
     fun startRecording()                                         // Start recording
     fun stopRecording()                                          // Stop recording
     fun setAudioConfig(config: AudioConfig)                      // Set configuration
@@ -313,6 +338,7 @@ class RecorderViewModel : ViewModel() {
 ```
 
 ### AudioConfig Class
+
 ```kotlin
 data class AudioConfig(
     val audioSource: String,                                     // Audio source name
@@ -335,29 +361,31 @@ data class AudioConfig(
 ### Common Issues
 
 1. **Recording Failure**
-   - Confirm recording permission granted
-   - Check device microphone functionality
-   - Verify audio parameter combination support
+    - Confirm recording permission granted
+    - Check device microphone functionality
+    - Verify audio parameter combination support
 
 2. **Permission Issues**
-   - The app will automatically request recording permission on first run, follow the on-screen prompts
-   - If permission is denied, manually grant recording permission in system settings
+    - The app will automatically request recording permission on first run, follow the on-screen
+      prompts
+    - If permission is denied, manually grant recording permission in system settings
    ```bash
    # For system-level audio sources, system permissions required
    adb root && adb remount && adb shell setenforce 0
    ```
 
 3. **Config Loading Failure**
-   - Check JSON format correctness
-   - Verify config file path
-   - View app logs for detailed error information
+    - Check JSON format correctness
+    - Verify config file path
+    - View app logs for detailed error information
 
 4. **File Write Failure**
-   - Check output directory write permissions
-   - Confirm sufficient storage space
-   - Verify file path format correctness
+    - Check output directory write permissions
+    - Confirm sufficient storage space
+    - Verify file path format correctness
 
 ### Debug Information
+
 ```bash
 # View app logs
 adb logcat -s AudioRecorder MainActivity RecorderViewModel
@@ -373,20 +401,20 @@ adb shell ls -la /data/data/com.example.audiorecorder/files/
 ### Performance Optimization Tips
 
 1. **Voice Recording**
-   - Use `VOICE_RECOGNITION` or `VOICE_COMMUNICATION` audio source
-   - Select 16kHz sample rate and mono configuration
-   - Use smaller buffer multiplier (2-4)
+    - Use `VOICE_RECOGNITION` or `VOICE_COMMUNICATION` audio source
+    - Select 16kHz sample rate and mono configuration
+    - Use smaller buffer multiplier (2-4)
 
 2. **High-Quality Recording**
-   - Use `MIC` audio source
-   - Select 48kHz or higher sample rate
-   - Use stereo and high bit depth
-   - Increase buffer multiplier (6-8)
+    - Use `MIC` audio source
+    - Select 48kHz or higher sample rate
+    - Use stereo and high bit depth
+    - Increase buffer multiplier (6-8)
 
 3. **Real-time Recording**
-   - Use `VOICE_PERFORMANCE` audio source
-   - Set smaller buffer multiplier (1-2)
-   - Select appropriate sample rate to balance quality and latency
+    - Use `VOICE_PERFORMANCE` audio source
+    - Set smaller buffer multiplier (1-2)
+    - Select appropriate sample rate to balance quality and latency
 
 ## 📊 Performance Metrics
 
@@ -400,9 +428,12 @@ adb shell ls -la /data/data/com.example.audiorecorder/files/
 
 ## 🔗 Related Projects
 
-- [**AudioPlayer**](https://github.com/kainan-tek/AudioPlayer) - Companion audio playback app based on AudioTrack API
-- [**AAudioRecorder**](https://github.com/kainan-tek/AAudioRecorder) - High-performance recorder based on AAudio API (standalone project)
-- [**AAudioPlayer**](https://github.com/kainan-tek/AAudioPlayer) - Player based on AAudio API (standalone project)
+- [**AudioPlayer**](https://github.com/kainan-tek/AudioPlayer) - Companion audio playback app based
+  on AudioTrack API
+- [**AAudioRecorder**](https://github.com/kainan-tek/AAudioRecorder) - High-performance recorder
+  based on AAudio API (standalone project)
+- [**AAudioPlayer**](https://github.com/kainan-tek/AAudioPlayer) - Player based on AAudio API (
+  standalone project)
 
 ## 📄 License
 
@@ -410,4 +441,5 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 
 ---
 
-**Note**: This project is for learning and testing purposes only. Please ensure use in appropriate devices and environments, and comply with relevant recording laws and regulations.
+**Note**: This project is for learning and testing purposes only. Please ensure use in appropriate
+devices and environments, and comply with relevant recording laws and regulations.

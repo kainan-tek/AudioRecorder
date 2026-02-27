@@ -6,7 +6,8 @@
 
 ## 📋 项目概述
 
-AudioRecorder是一个专为Android平台设计的音频录制测试工具，使用Android AudioRecord API。该项目展示了如何在Android应用中实现高质量的音频录制，支持多种录音使用场景和音频源类型，是音频开发者和测试工程师的理想工具。
+AudioRecorder是一个专为Android平台设计的音频录制测试工具，使用Android AudioRecord
+API。该项目展示了如何在Android应用中实现高质量的音频录制，支持多种录音使用场景和音频源类型，是音频开发者和测试工程师的理想工具。
 
 ## ✨ 主要特性
 
@@ -60,15 +61,15 @@ AudioRecorder是一个专为Android平台设计的音频录制测试工具，使
 ### 基本操作
 
 1. **录音控制**
-   - 🎙️ **开始录音**: 点击绿色录音按钮
-   - ⏹️ **停止录音**: 点击红色停止按钮
-   - ⚙️ **录音配置**: 点击配置按钮切换录音设置
+    - 🎙️ **开始录音**: 点击绿色录音按钮
+    - ⏹️ **停止录音**: 点击红色停止按钮
+    - ⚙️ **录音配置**: 点击配置按钮切换录音设置
 
 2. **配置管理**
-   - 应用启动时自动加载配置
-   - 支持从外部文件动态加载配置
-   - 可在运行时通过下拉菜单切换不同的录音场景
-   - 长按配置下拉菜单可重新加载外部配置文件
+    - 应用启动时自动加载配置
+    - 支持从外部文件动态加载配置
+    - 可在运行时通过下拉菜单切换不同的录音场景
+    - 长按配置下拉菜单可重新加载外部配置文件
 
 ### 配置切换流程
 
@@ -81,6 +82,7 @@ AudioRecorder是一个专为Android平台设计的音频录制测试工具，使
 ## 🎙️ 音频格式支持
 
 ### 声道配置
+
 | 声道数  | 配置名称  | 说明           | 应用场景          |
 |------|-------|--------------|---------------|
 | 1    | 单声道   | Mono         | 语音录制、通话录音     |
@@ -91,8 +93,9 @@ AudioRecorder是一个专为Android平台设计的音频录制测试工具，使
 | 1-16 | 其他配置  | 自动映射         | 根据声道数自动选择最佳配置 |
 
 ### 音频参数
+
 - **采样率**: 8kHz - 192kHz (常用: 16kHz, 48kHz)
-- **位深度**: 8/16/24/32 bit  
+- **位深度**: 8/16/24/32 bit
 - **格式**: WAV (PCM)
 - **最大声道**: 16声道
 - **配置系统**: 支持多种音频源和缓冲区配置
@@ -100,6 +103,7 @@ AudioRecorder是一个专为Android平台设计的音频录制测试工具，使
 ## 🎙️ 15种预设配置场景
 
 ### 基础音频源 (普通应用可用)
+
 1. **默认音频源** - 系统自动选择最合适的音频源 (48kHz立体声)
 2. **麦克风录音** - 通用录音场景 (48kHz立体声)
 3. **摄像录音** - 视频录制音频 (48kHz立体声)
@@ -109,14 +113,15 @@ AudioRecorder是一个专为Android平台设计的音频录制测试工具，使
 7. **语音性能** - 实时处理录制 (48kHz单声道)
 
 ### 系统级音频源 (需要特殊权限)
-8. **语音通话上行** - 语音通信发送 (16kHz单声道，需系统权限)
-9. **语音通话下行** - 语音通信接收 (16kHz单声道，需系统权限)
-10. **语音通话双向** - 完整通话录制 (16kHz单声道，需系统权限)
-11. **远程子混音** - 内部音频流 (48kHz立体声，需系统权限)
-12. **回声参考信号** - 用于回声消除 (48kHz立体声，需系统权限)
-13. **广播调谐器** - 广播电台音频 (48kHz立体声，需系统权限)
-14. **热词检测** - 低优先级热词检测 (16kHz单声道，需系统权限)
-15. **超声波录音** - 超声波频率录音 (48kHz单声道，需系统权限)
+
+1. **语音通话上行** - 语音通信发送 (16kHz单声道，需系统权限)
+2. **语音通话下行** - 语音通信接收 (16kHz单声道，需系统权限)
+3. **语音通话双向** - 完整通话录制 (16kHz单声道，需系统权限)
+4. **远程子混音** - 内部音频流 (48kHz立体声，需系统权限)
+5. **回声参考信号** - 用于回声消除 (48kHz立体声，需系统权限)
+6. **广播调谐器** - 广播电台音频 (48kHz立体声，需系统权限)
+7. **热词检测** - 低优先级热词检测 (16kHz单声道，需系统权限)
+8. **超声波录音** - 超声波频率录音 (48kHz单声道，需系统权限)
 
 > **重要说明**: 系统级音频源需要相应的系统权限，普通第三方应用无法使用这些音频源。
 
@@ -158,6 +163,7 @@ AudioRecorder是一个专为Android平台设计的音频录制测试工具，使
 **Audio Source (音频源):**
 
 #### 基础音频源 (普通应用可用)
+
 - `DEFAULT` - 默认音频源，系统自动选择
 - `MIC` - 麦克风音频源，标准录音应用首选
 - `CAMCORDER` - 摄像头录音，针对视频录制优化
@@ -167,6 +173,7 @@ AudioRecorder是一个专为Android平台设计的音频录制测试工具，使
 - `UNPROCESSED` - 未处理音频，提供原始音频信号
 
 #### 系统级音频源 (需要特殊权限)
+
 - `VOICE_UPLINK` - 语音通话上行信号 (需要CAPTURE_AUDIO_OUTPUT权限)
 - `VOICE_DOWNLINK` - 语音通话下行信号 (需要CAPTURE_AUDIO_OUTPUT权限)
 - `VOICE_CALL` - 语音通话双向信号 (需要CAPTURE_AUDIO_OUTPUT权限)
@@ -177,12 +184,14 @@ AudioRecorder是一个专为Android平台设计的音频录制测试工具，使
 - `ULTRASOUND` - 超声波录音 (需要ACCESS_ULTRASOUND权限)
 
 **Audio Format (音频格式):**
+
 - `8` - 8位整数 (基础质量，节省存储空间)
 - `16` - 16位整数 (标准质量，推荐使用)
 - `24` - 24位整数 (高质量，专业录音)
 - `32` - 32位整数 (最高质量，占用空间大)
 
 **Sample Rate (采样率):**
+
 - `8000` - 电话质量 (语音通话)
 - `16000` - 语音识别标准 (语音通话、识别、热词检测)
 - `44100` - CD音质 (标准录音)
@@ -191,6 +200,7 @@ AudioRecorder是一个专为Android平台设计的音频录制测试工具，使
 - `192000` - 最高质量 (超声波录音等特殊用途)
 
 **Channel Count (声道数):**
+
 - `1` - 单声道 (节省空间，语音录制)
 - `2` - 立体声 (标准录音，音乐录制)
 - `4-16` - 多声道录音 (专业用途，环境录制)
@@ -206,6 +216,7 @@ rec_YYYYMMDD_HHMMSS_[sampleRate]k_[channels]ch_[bitDepth]bit.wav
 ```
 
 **示例文件名:**
+
 - `rec_20240124_143052_48k_1ch_16bit.wav`
 - `rec_20240124_143052_16k_2ch_16bit.wav`
 
@@ -223,7 +234,7 @@ rec_YYYYMMDD_HHMMSS_[sampleRate]k_[channels]ch_[bitDepth]bit.wav
 - **AudioConfig**: 录音配置管理类，支持动态加载配置
 - **RecorderViewModel**: MVVM架构的视图模型，管理录音状态
 - **MainActivity**: 现代化主界面控制器，提供权限管理和用户交互
-- **WaveFile**: WAV文件写入器，支持实时写入
+- **WavFile**: WAV文件写入器，支持实时写入
 
 ### 技术栈
 
@@ -262,7 +273,7 @@ dependencies {
 ### 数据流架构
 
 ```
-麦克风 → AudioRecord → Audio Buffer → WaveFile → WAV文件
+麦克风 → AudioRecord → Audio Buffer → WavFile → WAV文件
                               ↓
                          Kotlin协程 → UI状态更新
 ```
@@ -286,6 +297,7 @@ dependencies {
 ## 📚 API 参考
 
 ### AudioRecorder 类
+
 ```kotlin
 class AudioRecorder(context: Context) {
     fun setAudioConfig(config: AudioConfig)                      // 设置配置
@@ -297,13 +309,14 @@ class AudioRecorder(context: Context) {
 ```
 
 ### RecorderViewModel 类
+
 ```kotlin
 class RecorderViewModel : ViewModel() {
     val recorderState: LiveData<RecorderState>                   // 录音状态
     val statusMessage: LiveData<String>                          // 状态消息
     val errorMessage: LiveData<String?>                          // 错误消息
     val currentConfig: LiveData<AudioConfig?>                    // 当前配置
-    
+
     fun startRecording()                                         // 开始录音
     fun stopRecording()                                          // 停止录音
     fun setAudioConfig(config: AudioConfig)                      // 设置配置
@@ -313,6 +326,7 @@ class RecorderViewModel : ViewModel() {
 ```
 
 ### AudioConfig 类
+
 ```kotlin
 data class AudioConfig(
     val audioSource: String,                                     // 音频源名称
@@ -335,29 +349,30 @@ data class AudioConfig(
 ### 常见问题
 
 1. **录音失败**
-   - 确认已授予录音权限
-   - 检查设备麦克风是否正常
-   - 验证音频参数组合是否支持
+    - 确认已授予录音权限
+    - 检查设备麦克风是否正常
+    - 验证音频参数组合是否支持
 
 2. **权限问题**
-   - 应用首次运行时会自动请求录音权限，按照屏幕提示授予
-   - 如果权限被拒绝，可在系统设置中手动授予录音权限
+    - 应用首次运行时会自动请求录音权限，按照屏幕提示授予
+    - 如果权限被拒绝，可在系统设置中手动授予录音权限
    ```bash
    # 对于系统级音频源，需要系统权限
    adb root && adb remount && adb shell setenforce 0
    ```
 
 3. **配置加载失败**
-   - 检查JSON格式是否正确
-   - 验证配置文件路径
-   - 查看应用日志获取详细错误信息
+    - 检查JSON格式是否正确
+    - 验证配置文件路径
+    - 查看应用日志获取详细错误信息
 
 4. **文件写入失败**
-   - 检查输出目录是否有写入权限
-   - 确认存储空间是否充足
-   - 验证文件路径格式是否正确
+    - 检查输出目录是否有写入权限
+    - 确认存储空间是否充足
+    - 验证文件路径格式是否正确
 
 ### 调试信息
+
 ```bash
 # 查看应用日志
 adb logcat -s AudioRecorder MainActivity RecorderViewModel
@@ -373,20 +388,20 @@ adb shell ls -la /data/data/com.example.audiorecorder/files/
 ### 性能优化建议
 
 1. **语音录音**
-   - 使用 `VOICE_RECOGNITION` 或 `VOICE_COMMUNICATION` 音频源
-   - 选择16kHz采样率和单声道配置
-   - 使用较小的缓冲区倍数 (2-4)
+    - 使用 `VOICE_RECOGNITION` 或 `VOICE_COMMUNICATION` 音频源
+    - 选择16kHz采样率和单声道配置
+    - 使用较小的缓冲区倍数 (2-4)
 
 2. **高质量录音**
-   - 使用 `MIC` 音频源
-   - 选择48kHz或更高采样率
-   - 使用立体声和高位深度
-   - 增大缓冲区倍数 (6-8)
+    - 使用 `MIC` 音频源
+    - 选择48kHz或更高采样率
+    - 使用立体声和高位深度
+    - 增大缓冲区倍数 (6-8)
 
 3. **实时录音**
-   - 使用 `VOICE_PERFORMANCE` 音频源
-   - 设置较小的缓冲区倍数 (1-2)
-   - 选择合适的采样率平衡质量和延迟
+    - 使用 `VOICE_PERFORMANCE` 音频源
+    - 设置较小的缓冲区倍数 (1-2)
+    - 选择合适的采样率平衡质量和延迟
 
 ## 📊 性能指标
 
@@ -400,7 +415,8 @@ adb shell ls -la /data/data/com.example.audiorecorder/files/
 
 ## 🔗 相关项目
 
-- [**AudioPlayer**](https://github.com/kainan-tek/AudioPlayer) - 配套的音频播放应用，基于AudioTrack API
+- [**AudioPlayer**](https://github.com/kainan-tek/AudioPlayer) - 配套的音频播放应用，基于AudioTrack
+  API
 - [**AAudioRecorder**](https://github.com/kainan-tek/AAudioRecorder) - 基于AAudio API的高性能录音器（独立项目）
 - [**AAudioPlayer**](https://github.com/kainan-tek/AAudioPlayer) - 基于AAudio API的播放器（独立项目）
 

@@ -23,14 +23,14 @@ import com.example.audiorecorder.viewmodel.RecorderViewModel
 
 
 class MainActivity : AppCompatActivity() {
-    
+
     private lateinit var viewModel: RecorderViewModel
     private lateinit var startButton: Button
     private lateinit var stopButton: Button
     private lateinit var configSpinner: Spinner
     private lateinit var statusText: TextView
     private lateinit var recordingInfoText: TextView
-    
+
     private var isSpinnerInitialized = false
 
     companion object {
@@ -41,7 +41,7 @@ class MainActivity : AppCompatActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_main)
-        
+
         initViews()
         initViewModel()
         setupClickListeners()
@@ -58,23 +58,23 @@ class MainActivity : AppCompatActivity() {
 
     private fun initViewModel() {
         viewModel = ViewModelProvider(this)[RecorderViewModel::class.java]
-        
+
         // Observe recording state
         viewModel.recorderState.observe(this) { state ->
             updateButtonStates(state)
             updateRecordingInfo()
         }
-        
+
         // Observe status messages
         viewModel.statusMessage.observe(this) { message ->
             statusText.text = message
         }
-        
+
         // Observe error messages
         viewModel.errorMessage.observe(this) { error ->
             error?.let { handleError(it) }
         }
-        
+
         // Observe current configuration
         viewModel.currentConfig.observe(this) { config ->
             config?.let {
@@ -96,31 +96,31 @@ class MainActivity : AppCompatActivity() {
             }
             viewModel.startRecording()
         }
-        
+
         stopButton.setOnClickListener {
             viewModel.stopRecording()
         }
     }
-    
+
     /**
      * Setup configuration spinner
      */
     private fun setupConfigSpinner() {
         val configs = viewModel.getAllAudioConfigs()
         Log.d(TAG, "Setting up config spinner with ${configs.size} configurations")
-        
+
         if (configs.isEmpty()) {
             Log.w(TAG, "No configurations available for spinner")
             return
         }
-        
+
         val configNames = configs.map { it.description }
         Log.d(TAG, "Config names: $configNames")
-        
+
         val adapter = ArrayAdapter(this, android.R.layout.simple_spinner_item, configNames)
         adapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item)
         configSpinner.adapter = adapter
-        
+
         // Set initial selection
         val currentConfig = viewModel.currentConfig.value
         currentConfig?.let {
@@ -130,26 +130,31 @@ class MainActivity : AppCompatActivity() {
                 Log.d(TAG, "Set initial spinner selection to index $index: ${it.description}")
             }
         }
-        
+
         configSpinner.onItemSelectedListener = object : AdapterView.OnItemSelectedListener {
-            override fun onItemSelected(parent: AdapterView<*>?, view: View?, position: Int, id: Long) {
+            override fun onItemSelected(
+                parent: AdapterView<*>?,
+                view: View?,
+                position: Int,
+                id: Long,
+            ) {
                 if (!isSpinnerInitialized) {
                     isSpinnerInitialized = true
                     Log.d(TAG, "Spinner initialized, skipping first selection")
                     return
                 }
-                
+
                 val selectedConfig = configs[position]
                 Log.d(TAG, "Config selected: ${selectedConfig.description}")
                 viewModel.setAudioConfig(selectedConfig)
                 showToast("Switched to: ${selectedConfig.description}")
             }
-            
+
             override fun onNothingSelected(parent: AdapterView<*>?) {
                 Log.d(TAG, "Nothing selected in spinner")
             }
         }
-        
+
         // Add long press listener to reload configurations
         configSpinner.setOnLongClickListener {
             Log.d(TAG, "Long press detected on spinner")
@@ -157,7 +162,7 @@ class MainActivity : AppCompatActivity() {
             true
         }
     }
-    
+
     /**
      * Update spinner selection based on config description
      */
@@ -180,11 +185,13 @@ class MainActivity : AppCompatActivity() {
                 stopButton.isEnabled = false
                 configSpinner.isEnabled = true
             }
+
             RecorderState.RECORDING -> {
                 startButton.isEnabled = false
                 stopButton.isEnabled = true
                 configSpinner.isEnabled = false  // Disable configuration changes during recording
             }
+
             RecorderState.ERROR -> {
                 startButton.isEnabled = true
                 stopButton.isEnabled = false
@@ -199,47 +206,46 @@ class MainActivity : AppCompatActivity() {
     @SuppressLint("SetTextI18n")
     private fun handleError(error: String) {
         Log.e(TAG, "Audio recording error: $error")
-        
+
         val userMessage = getUserFriendlyErrorMessage(error)
-        
-        AlertDialog.Builder(this)
-            .setTitle("Recording Error")
-            .setMessage(userMessage)
+
+        AlertDialog.Builder(this).setTitle("Recording Error").setMessage(userMessage)
             .setPositiveButton("OK") { dialog, _ ->
                 dialog.dismiss()
                 viewModel.clearError()
-            }
-            .setCancelable(true)
-            .setOnCancelListener {
+            }.setCancelable(true).setOnCancelListener {
                 viewModel.clearError()
-            }
-            .show()
-        
+            }.show()
+
         statusText.text = "Error: $userMessage"
         updateButtonStates(RecorderState.ERROR)
     }
-    
+
     /**
      * Convert technical error message to user-friendly message
      */
     private fun getUserFriendlyErrorMessage(error: String): String {
         return when {
-            error.startsWith("[FILE]", ignoreCase = true) -> 
-                "Unable to create recording file. Please check storage permissions and available space."
-            
-            error.startsWith("[STREAM]", ignoreCase = true) -> 
-                "Audio system initialization failed. Please try again."
-            
-            error.startsWith("[PERMISSION]", ignoreCase = true) -> 
-                "Microphone access permission is required. Please grant the permission in Settings."
-            
-            error.startsWith("[PARAM]", ignoreCase = true) -> 
-                "Invalid audio configuration. Please select a different configuration."
-            
+            error.startsWith(
+                "[FILE]", ignoreCase = true
+            ) -> "Unable to create recording file. Please check storage permissions and available space."
+
+            error.startsWith(
+                "[STREAM]", ignoreCase = true
+            ) -> "Audio system initialization failed. Please try again."
+
+            error.startsWith(
+                "[PERMISSION]", ignoreCase = true
+            ) -> "Microphone access permission is required. Please grant the permission in Settings."
+
+            error.startsWith(
+                "[PARAM]", ignoreCase = true
+            ) -> "Invalid audio configuration. Please select a different configuration."
+
             else -> "Recording failed. Please try again."
         }
     }
-    
+
     /**
      * Reload configuration file
      */
@@ -269,12 +275,13 @@ class MainActivity : AppCompatActivity() {
                     Manifest.permission.WRITE_EXTERNAL_STORAGE
                 )
             }
+
             Build.VERSION.SDK_INT <= Build.VERSION_CODES.S_V2 -> {
                 arrayOf(
-                    Manifest.permission.RECORD_AUDIO,
-                    Manifest.permission.READ_EXTERNAL_STORAGE
+                    Manifest.permission.RECORD_AUDIO, Manifest.permission.READ_EXTERNAL_STORAGE
                 )
             }
+
             else -> {
                 arrayOf(Manifest.permission.RECORD_AUDIO)
             }
@@ -300,14 +307,11 @@ class MainActivity : AppCompatActivity() {
         }
 
         if (deniedPermissions.isNotEmpty()) {
-            AlertDialog.Builder(this)
-                .setTitle("Permission Required")
+            AlertDialog.Builder(this).setTitle("Permission Required")
                 .setMessage("This app needs microphone and storage access permissions to record and save audio files.")
                 .setPositiveButton("Grant") { _, _ ->
                     ActivityCompat.requestPermissions(this, permissions, PERMISSION_REQUEST_CODE)
-                }
-                .setNegativeButton("Cancel", null)
-                .show()
+                }.setNegativeButton("Cancel", null).show()
         } else {
             ActivityCompat.requestPermissions(this, permissions, PERMISSION_REQUEST_CODE)
         }
@@ -316,10 +320,10 @@ class MainActivity : AppCompatActivity() {
     override fun onRequestPermissionsResult(
         requestCode: Int,
         permissions: Array<out String>,
-        grantResults: IntArray
+        grantResults: IntArray,
     ) {
         super.onRequestPermissionsResult(requestCode, permissions, grantResults)
-        
+
         if (requestCode == PERMISSION_REQUEST_CODE && grantResults.isNotEmpty()) {
             val allGranted = grantResults.all { it == PackageManager.PERMISSION_GRANTED }
             val message = if (allGranted) {
@@ -341,7 +345,7 @@ class MainActivity : AppCompatActivity() {
             Log.e(TAG, "Error releasing AudioRecorder resources", e)
         }
     }
-    
+
     override fun onPause() {
         super.onPause()
         // Stop recording when app goes to background
@@ -361,10 +365,8 @@ class MainActivity : AppCompatActivity() {
             val filePathDisplay = config.audioFilePath.ifBlank {
                 "<App default path (auto-generated at recording start)>"
             }
-            val configInfo = "Current Config: ${config.description}\n" +
-                    "Source: ${config.audioSource}\n" +
-                    "Parameters: ${config.sampleRate}Hz | ${config.channelCount}ch | ${config.audioFormat}bit\n" +
-                    "File: $filePathDisplay"
+            val configInfo =
+                "Current Config: ${config.description}\n" + "Source: ${config.audioSource}\n" + "Parameters: ${config.sampleRate}Hz | ${config.channelCount}ch | ${config.audioFormat}bit\n" + "File: $filePathDisplay"
             recordingInfoText.text = configInfo
         } ?: run {
             recordingInfoText.text = "Recording Info"

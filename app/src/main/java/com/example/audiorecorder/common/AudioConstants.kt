@@ -8,11 +8,11 @@ import android.media.MediaRecorder
  * For constants and utility class management in AudioRecorder project
  */
 object AudioConstants {
-    
+
     // ============ File Paths ============
     const val CONFIG_FILE_PATH = "/data/audio_recorder_configs.json"
     const val ASSETS_CONFIG_FILE = "audio_recorder_configs.json"
-    
+
     // ============ AudioRecord Audio Source Constants ============
     object AudioSource {
         const val DEFAULT = MediaRecorder.AudioSource.DEFAULT
@@ -26,13 +26,13 @@ object AudioConstants {
         const val REMOTE_SUBMIX = MediaRecorder.AudioSource.REMOTE_SUBMIX
         const val UNPROCESSED = MediaRecorder.AudioSource.UNPROCESSED
         const val VOICE_PERFORMANCE = MediaRecorder.AudioSource.VOICE_PERFORMANCE
-        
+
         // System-level audio sources
         const val ECHO_REFERENCE = 1997
         const val RADIO_TUNER = 1998
         const val HOTWORD = 1999
         const val ULTRASOUND = 2000
-        
+
         // Audio source mapping table
         val MAP = mapOf(
             DEFAULT to "DEFAULT",
@@ -52,7 +52,7 @@ object AudioConstants {
             ULTRASOUND to "ULTRASOUND"
         )
     }
-    
+
     // ============ Utility Functions ============
     /**
      * Get audio source integer value from string.
@@ -65,7 +65,12 @@ object AudioConstants {
      * Keeps the same behavior style as AudioPlayer.AudioConstants.
      */
     @Suppress("SameParameterValue")
-    private fun parseEnumValue(map: Map<Int, String>, value: String, default: Int, typeName: String = ""): Int {
+    private fun parseEnumValue(
+        map: Map<Int, String>,
+        value: String,
+        default: Int,
+        typeName: String = "",
+    ): Int {
         val result = map.entries.find { it.value == value.uppercase() }?.key ?: default
         if (result == default && value.isNotEmpty()) {
             android.util.Log.w("AudioConstants", "Unknown $typeName value: $value, using default")
@@ -85,7 +90,9 @@ object AudioConstants {
         )
 
         return audioFormats[bitsPerSample] ?: run {
-            android.util.Log.w("AudioConstants", "Unsupported bit depth: $bitsPerSample, using 16-bit")
+            android.util.Log.w(
+                "AudioConstants", "Unsupported bit depth: $bitsPerSample, using 16-bit"
+            )
             AudioFormat.ENCODING_PCM_16BIT
         }
     }
@@ -97,8 +104,7 @@ object AudioConstants {
      */
     fun getChannelMask(channelCount: Int): Int {
         val channelMasks = mapOf(
-            1 to AudioFormat.CHANNEL_IN_MONO,
-            2 to AudioFormat.CHANNEL_IN_STEREO,
+            1 to AudioFormat.CHANNEL_IN_MONO, 2 to AudioFormat.CHANNEL_IN_STEREO,
             // Requires underlying software support
             8 to 1020,     // 0x3FC
             10 to 4092,    // 0xFFC

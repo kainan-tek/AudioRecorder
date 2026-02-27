@@ -17,22 +17,22 @@ import kotlinx.coroutines.launch
  * Supports loading audio configuration from external JSON files
  */
 class RecorderViewModel(application: Application) : AndroidViewModel(application) {
-    
+
     private val audioRecorder = AudioRecorder(application.applicationContext)
-    
+
     // UI state
     private val _recorderState = MutableLiveData(RecorderState.IDLE)
     val recorderState: LiveData<RecorderState> = _recorderState
-    
+
     private val _statusMessage = MutableLiveData<String>()
     val statusMessage: LiveData<String> = _statusMessage
-    
+
     private val _errorMessage = MutableLiveData<String?>()
     val errorMessage: LiveData<String?> = _errorMessage
-    
+
     private val _currentConfig = MutableLiveData<AudioConfig>()
     val currentConfig: LiveData<AudioConfig> = _currentConfig
-    
+
     private val _availableConfigs = MutableLiveData<List<AudioConfig>>()
 
     init {
@@ -70,7 +70,7 @@ class RecorderViewModel(application: Application) : AndroidViewModel(application
             })
             return
         }
-        
+
         viewModelScope.launch(Dispatchers.IO) {
             try {
                 val configs = AudioConfig.reloadConfigs(getApplication())
@@ -78,12 +78,14 @@ class RecorderViewModel(application: Application) : AndroidViewModel(application
                     if (configs.isNotEmpty()) {
                         _availableConfigs.value = configs
                         val currentConfigDescription = _currentConfig.value?.description
-                        val newCurrentConfig = configs.find { it.description == currentConfigDescription } 
-                            ?: configs[0]
-                        
+                        val newCurrentConfig =
+                            configs.find { it.description == currentConfigDescription }
+                                ?: configs[0]
+
                         audioRecorder.setAudioConfig(newCurrentConfig)
                         _currentConfig.value = newCurrentConfig
-                        _statusMessage.value = "Configuration reloaded successfully: ${configs.size} configs"
+                        _statusMessage.value =
+                            "Configuration reloaded successfully: ${configs.size} configs"
                     } else {
                         _statusMessage.value = "Configuration file is empty or format error"
                         _errorMessage.value = "No valid recording configuration found"
@@ -100,11 +102,11 @@ class RecorderViewModel(application: Application) : AndroidViewModel(application
 
     fun startRecording() {
         if (_recorderState.value == RecorderState.RECORDING) return
-        
+
         updateUI({
             _statusMessage.value = getString(R.string.status_preparing)
         })
-        
+
         viewModelScope.launch(Dispatchers.IO) {
             val success = audioRecorder.startRecording()
             if (!success) {
@@ -122,11 +124,11 @@ class RecorderViewModel(application: Application) : AndroidViewModel(application
 
     fun stopRecording() {
         if (_recorderState.value != RecorderState.RECORDING) return
-        
+
         _statusMessage.value = getString(R.string.status_stopping)
         audioRecorder.stopRecording()
     }
-    
+
     fun setAudioConfig(config: AudioConfig) {
         audioRecorder.setAudioConfig(config)
         updateUI({
@@ -134,9 +136,9 @@ class RecorderViewModel(application: Application) : AndroidViewModel(application
             _statusMessage.value = "Configuration updated: ${config.description}"
         })
     }
-    
+
     fun getAllAudioConfigs(): List<AudioConfig> = _availableConfigs.value ?: emptyList()
-    
+
     /**
      * Clear error state and reset to idle
      */

@@ -17,11 +17,11 @@ data class AudioConfig(
     val audioFormat: Int = 16, // A bit of depth: 8, 16, 24, 32
     val bufferMultiplier: Int = 2,
     val audioFilePath: String = "",
-    val description: String = "Default recording configuration"
+    val description: String = "Default recording configuration",
 ) {
     companion object {
         private const val TAG = "AudioConfig"
-        
+
         /**
          * Load configuration file
          */
@@ -33,7 +33,8 @@ data class AudioConfig(
                     externalFile.readText()
                 } else {
                     Log.i(TAG, "Loading configuration from assets")
-                    context.assets.open(AudioConstants.ASSETS_CONFIG_FILE).bufferedReader().use { it.readText() }
+                    context.assets.open(AudioConstants.ASSETS_CONFIG_FILE).bufferedReader()
+                        .use { it.readText() }
                 }
                 parseConfigs(jsonString)
             } catch (e: Exception) {
