@@ -8,7 +8,6 @@ import java.io.File
 
 /**
  * Audio recording configuration data class
- * Supports loading and managing recording parameters from JSON files, supports up to 16-channel recording
  */
 data class AudioConfig(
     val audioSource: String = "MIC",
@@ -17,14 +16,26 @@ data class AudioConfig(
     val audioFormat: Int = 16, // A bit of depth: 8, 16, 24, 32
     val bufferMultiplier: Int = 2,
     val audioFilePath: String = "",
-    val description: String = "Default recording configuration",
+    val description: String = "Default Configuration",
 ) {
+    init {
+        require(AudioConstants.isValidSampleRate(sampleRate)) {
+            "Invalid sample rate: $sampleRate (supported: 8000-192000Hz)"
+        }
+        require(AudioConstants.isValidChannelCount(channelCount)) {
+            "Invalid channel count: $channelCount (supported: 1-16)"
+        }
+        require(AudioConstants.isValidBitDepth(audioFormat)) {
+            "Invalid bit depth: $audioFormat (supported: 8, 16, 24, 32)"
+        }
+        require(bufferMultiplier > 0) {
+            "Buffer multiplier must be positive: $bufferMultiplier"
+        }
+    }
+
     companion object {
         private const val TAG = "AudioConfig"
 
-        /**
-         * Load configuration file
-         */
         fun loadConfigs(context: Context): List<AudioConfig> {
             return try {
                 val externalFile = File(AudioConstants.CONFIG_FILE_PATH)
@@ -43,9 +54,6 @@ data class AudioConfig(
             }
         }
 
-        /**
-         * Reload configurations
-         */
         fun reloadConfigs(context: Context): List<AudioConfig> {
             Log.i(TAG, "Reloading configuration file")
             return loadConfigs(context)

@@ -15,17 +15,26 @@ import android.widget.Spinner
 import android.widget.TextView
 import android.widget.Toast
 import androidx.appcompat.app.AppCompatActivity
-import androidx.core.app.ActivityCompat
 import androidx.core.content.ContextCompat
 import androidx.lifecycle.ViewModelProvider
 import com.example.audiorecorder.recorder.RecorderState
 import com.example.audiorecorder.viewmodel.RecorderViewModel
 
 
+/**
+ * Audio Recorder Main Activity
+ *
+ * Usage Instructions:
+ * 1. Grant recording permissions
+ * 2. Select recording configuration from dropdown
+ * 3. Start recording
+ *
+ * System Requirements: Android 12L (API 32+)
+ */
 class MainActivity : AppCompatActivity() {
 
     private lateinit var viewModel: RecorderViewModel
-    private lateinit var startButton: Button
+    private lateinit var recordButton: Button
     private lateinit var stopButton: Button
     private lateinit var configSpinner: Spinner
     private lateinit var statusText: TextView
@@ -45,11 +54,11 @@ class MainActivity : AppCompatActivity() {
         initViews()
         initViewModel()
         setupClickListeners()
-        if (!hasRequiredPermissions()) requestRequiredPermissions()
+        if (!hasAudioPermission()) requestAudioPermission()
     }
 
     private fun initViews() {
-        startButton = findViewById(R.id.recordButton)
+        recordButton = findViewById(R.id.recordButton)
         stopButton = findViewById(R.id.stopButton)
         configSpinner = findViewById(R.id.configSpinner)
         statusText = findViewById(R.id.statusTextView)
@@ -83,15 +92,19 @@ class MainActivity : AppCompatActivity() {
                 // Initialize spinner when config is first loaded
                 if (configSpinner.adapter == null) {
                     setupConfigSpinner()
+                    Log.i(
+                        TAG,
+                        "Loaded ${viewModel.getAllAudioConfigs().size} recording configurations"
+                    )
                 }
             }
         }
     }
 
     private fun setupClickListeners() {
-        startButton.setOnClickListener {
-            if (!hasRequiredPermissions()) {
-                requestRequiredPermissions()
+        recordButton.setOnClickListener {
+            if (!hasAudioPermission()) {
+                requestAudioPermission()
                 return@setOnClickListener
             }
             viewModel.startRecording()
@@ -107,15 +120,13 @@ class MainActivity : AppCompatActivity() {
      */
     private fun setupConfigSpinner() {
         val configs = viewModel.getAllAudioConfigs()
-        Log.d(TAG, "Setting up config spinner with ${configs.size} configurations")
 
         if (configs.isEmpty()) {
-            Log.w(TAG, "No configurations available for spinner")
+            Log.w(TAG, "No configurations available")
             return
         }
 
         val configNames = configs.map { it.description }
-        Log.d(TAG, "Config names: $configNames")
 
         val adapter = ArrayAdapter(this, android.R.layout.simple_spinner_item, configNames)
         adapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item)
@@ -127,7 +138,6 @@ class MainActivity : AppCompatActivity() {
             val index = configs.indexOfFirst { config -> config.description == it.description }
             if (index >= 0) {
                 configSpinner.setSelection(index)
-                Log.d(TAG, "Set initial spinner selection to index $index: ${it.description}")
             }
         }
 
@@ -140,24 +150,19 @@ class MainActivity : AppCompatActivity() {
             ) {
                 if (!isSpinnerInitialized) {
                     isSpinnerInitialized = true
-                    Log.d(TAG, "Spinner initialized, skipping first selection")
                     return
                 }
 
                 val selectedConfig = configs[position]
-                Log.d(TAG, "Config selected: ${selectedConfig.description}")
                 viewModel.setAudioConfig(selectedConfig)
                 showToast("Switched to: ${selectedConfig.description}")
             }
 
-            override fun onNothingSelected(parent: AdapterView<*>?) {
-                Log.d(TAG, "Nothing selected in spinner")
-            }
+            override fun onNothingSelected(parent: AdapterView<*>?) {}
         }
 
         // Add long press listener to reload configurations
         configSpinner.setOnLongClickListener {
-            Log.d(TAG, "Long press detected on spinner")
             reloadConfigurations()
             true
         }
@@ -181,19 +186,19 @@ class MainActivity : AppCompatActivity() {
     private fun updateButtonStates(state: RecorderState) {
         when (state) {
             RecorderState.IDLE -> {
-                startButton.isEnabled = true
+                recordButton.isEnabled = true
                 stopButton.isEnabled = false
                 configSpinner.isEnabled = true
             }
 
             RecorderState.RECORDING -> {
-                startButton.isEnabled = false
+                recordButton.isEnabled = false
                 stopButton.isEnabled = true
                 configSpinner.isEnabled = false  // Disable configuration changes during recording
             }
 
             RecorderState.ERROR -> {
-                startButton.isEnabled = true
+                recordButton.isEnabled = true
                 stopButton.isEnabled = false
                 configSpinner.isEnabled = true
             }
@@ -242,6 +247,14 @@ class MainActivity : AppCompatActivity() {
                 "[PARAM]", ignoreCase = true
             ) -> "Invalid audio configuration. Please select a different configuration."
 
+            error.contains(
+                "Already recording", ignoreCase = true
+            ) -> "Recording is already in progress."
+
+            error.contains(
+                "Not currently recording", ignoreCase = true
+            ) -> "No recording is in progress."
+
             else -> "Recording failed. Please try again."
         }
     }
@@ -249,6 +262,7 @@ class MainActivity : AppCompatActivity() {
     /**
      * Reload configuration file
      */
+    @SuppressLint("SetTextI18n")
     private fun reloadConfigurations() {
         try {
             viewModel.reloadConfigurations()
@@ -291,7 +305,7 @@ class MainActivity : AppCompatActivity() {
     /**
      * Check if all required permissions are granted
      */
-    private fun hasRequiredPermissions(): Boolean {
+    private fun hasAudioPermission(): Boolean {
         return getRequiredPermissions().all {
             ContextCompat.checkSelfPermission(this, it) == PackageManager.PERMISSION_GRANTED
         }
@@ -300,21 +314,8 @@ class MainActivity : AppCompatActivity() {
     /**
      * Request required permissions
      */
-    private fun requestRequiredPermissions() {
-        val permissions = getRequiredPermissions()
-        val deniedPermissions = permissions.filter {
-            ActivityCompat.shouldShowRequestPermissionRationale(this, it)
-        }
-
-        if (deniedPermissions.isNotEmpty()) {
-            AlertDialog.Builder(this).setTitle("Permission Required")
-                .setMessage("This app needs microphone and storage access permissions to record and save audio files.")
-                .setPositiveButton("Grant") { _, _ ->
-                    ActivityCompat.requestPermissions(this, permissions, PERMISSION_REQUEST_CODE)
-                }.setNegativeButton("Cancel", null).show()
-        } else {
-            ActivityCompat.requestPermissions(this, permissions, PERMISSION_REQUEST_CODE)
-        }
+    private fun requestAudioPermission() {
+        requestPermissions(getRequiredPermissions(), PERMISSION_REQUEST_CODE)
     }
 
     override fun onRequestPermissionsResult(
@@ -327,36 +328,13 @@ class MainActivity : AppCompatActivity() {
         if (requestCode == PERMISSION_REQUEST_CODE && grantResults.isNotEmpty()) {
             val allGranted = grantResults.all { it == PackageManager.PERMISSION_GRANTED }
             val message = if (allGranted) {
-                getString(R.string.permission_granted)
+                "Permission granted"
             } else {
                 val deniedCount = grantResults.count { it != PackageManager.PERMISSION_GRANTED }
-                "${getString(R.string.permission_required)} ($deniedCount permission(s) denied)"
+                "Recording permission required ($deniedCount permission(s) denied)"
             }
             showToast(message)
         }
-    }
-
-    override fun onDestroy() {
-        super.onDestroy()
-        try {
-            viewModel.stopRecording()
-            Log.d(TAG, "AudioRecorder resources released successfully")
-        } catch (e: Exception) {
-            Log.e(TAG, "Error releasing AudioRecorder resources", e)
-        }
-    }
-
-    override fun onPause() {
-        super.onPause()
-        // Stop recording when app goes to background
-        if (viewModel.recorderState.value == RecorderState.RECORDING) {
-            viewModel.stopRecording()
-            Log.d(TAG, "Recording stopped due to app going to background")
-        }
-    }
-
-    private fun showToast(message: String) {
-        Toast.makeText(this, message, Toast.LENGTH_SHORT).show()
     }
 
     @SuppressLint("SetTextI18n")
@@ -370,6 +348,29 @@ class MainActivity : AppCompatActivity() {
             recordingInfoText.text = configInfo
         } ?: run {
             recordingInfoText.text = "Recording Info"
+        }
+    }
+
+    private fun showToast(message: String) {
+        Toast.makeText(this, message, Toast.LENGTH_SHORT).show()
+    }
+
+    override fun onDestroy() {
+        super.onDestroy()
+        try {
+            viewModel.release()
+            Log.d(TAG, "AudioRecorder resources released successfully")
+        } catch (e: Exception) {
+            Log.e(TAG, "Error releasing AudioRecorder resources", e)
+        }
+    }
+
+    override fun onPause() {
+        super.onPause()
+        // Stop recording when app goes to background
+        if (viewModel.isRecording()) {
+            viewModel.stopRecording()
+            Log.d(TAG, "Recording stopped due to app going to background")
         }
     }
 }

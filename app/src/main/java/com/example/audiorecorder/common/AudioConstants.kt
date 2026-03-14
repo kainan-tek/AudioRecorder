@@ -4,16 +4,27 @@ import android.media.AudioFormat
 import android.media.MediaRecorder
 
 /**
- * Unified audio constants definition
- * For constants and utility class management in AudioRecorder project
+ * Common audio constants and utilities
  */
 object AudioConstants {
 
-    // ============ File Paths ============
+    // Configuration file paths
     const val CONFIG_FILE_PATH = "/data/audio_recorder_configs.json"
     const val ASSETS_CONFIG_FILE = "audio_recorder_configs.json"
 
-    // ============ AudioRecord Audio Source Constants ============
+    /**
+     * Error type prefixes for consistent error handling
+     */
+    object ErrorTypes {
+        const val FILE = "[FILE]"
+        const val STREAM = "[STREAM]"
+        const val PERMISSION = "[PERMISSION]"
+        const val PARAM = "[PARAM]"
+    }
+
+    /**
+     * AudioRecord audio source constants mapping
+     */
     object AudioSource {
         const val DEFAULT = MediaRecorder.AudioSource.DEFAULT
         const val MIC = MediaRecorder.AudioSource.MIC
@@ -27,11 +38,11 @@ object AudioConstants {
         const val UNPROCESSED = MediaRecorder.AudioSource.UNPROCESSED
         const val VOICE_PERFORMANCE = MediaRecorder.AudioSource.VOICE_PERFORMANCE
 
-        // System-level audio sources
-        const val ECHO_REFERENCE = 1997
-        const val RADIO_TUNER = 1998
-        const val HOTWORD = 1999
-        const val ULTRASOUND = 2000
+        // System-level audio sources (require system signature or special permissions)
+        const val ECHO_REFERENCE = 1997  // Requires RECORD_AUDIO and system permissions
+        const val RADIO_TUNER = 1998    // Requires system signature
+        const val HOTWORD = 1999        // Requires system signature, for hotword detection
+        const val ULTRASOUND = 2000     // Requires RECORD_AUDIO and system permissions
 
         // Audio source mapping table
         val MAP = mapOf(
@@ -53,16 +64,14 @@ object AudioConstants {
         )
     }
 
-    // ============ Utility Functions ============
     /**
-     * Get audio source integer value from string.
+     * Get audio source integer value from string
      */
     fun getAudioSource(audioSource: String): Int =
         parseEnumValue(AudioSource.MAP, audioSource, MediaRecorder.AudioSource.MIC, "AudioSource")
 
     /**
-     * Generic enum value parser with error handling.
-     * Keeps the same behavior style as AudioPlayer.AudioConstants.
+     * Generic enum value parser with error handling
      */
     @Suppress("SameParameterValue")
     private fun parseEnumValue(
@@ -71,11 +80,17 @@ object AudioConstants {
         default: Int,
         typeName: String = "",
     ): Int {
-        val result = map.entries.find { it.value == value.uppercase() }?.key ?: default
-        if (result == default && value.isNotEmpty()) {
-            android.util.Log.w("AudioConstants", "Unknown $typeName value: $value, using default")
+        val entry = map.entries.find { it.value == value }
+        if (entry != null) {
+            return entry.key
         }
-        return result
+
+        if (value.isNotEmpty()) {
+            android.util.Log.w(
+                "AudioConstants", "Unknown $typeName value: $value, using default: $default"
+            )
+        }
+        return default
     }
 
     /**
@@ -105,12 +120,13 @@ object AudioConstants {
     fun getChannelMask(channelCount: Int): Int {
         val channelMasks = mapOf(
             1 to AudioFormat.CHANNEL_IN_MONO, 2 to AudioFormat.CHANNEL_IN_STEREO,
-            // Requires underlying software support
-            8 to 1020,     // 0x3FC
-            10 to 4092,    // 0xFFC
-            12 to 16380,   // 0x3FFC
-            14 to 1048572, // 0xFFFFC
-            16 to 4194300  // 0X3FFFFC
+            // Multi-channel input masks (requires device support)
+            // These values represent specific channel configurations for professional audio recording
+            8 to 0x3FC,      // 8-channel: 6 mic + 2 reference (for active noise cancellation)
+            10 to 0xFFC,     // 10-channel: 5.1.4 surround sound recording
+            12 to 0x3FFC,    // 12-channel: 7.1.4 surround sound recording
+            14 to 0xFFFFC,   // 14-channel: extended surround configuration
+            16 to 0x3FFFFC   // 16-channel: full channel configuration
         )
 
         return channelMasks[channelCount] ?: run {
@@ -121,4 +137,10 @@ object AudioConstants {
             AudioFormat.CHANNEL_IN_STEREO
         }
     }
+
+    fun isValidSampleRate(rate: Int): Boolean = rate in 8000..192000
+
+    fun isValidChannelCount(count: Int): Boolean = count in 1..16
+
+    fun isValidBitDepth(depth: Int): Boolean = depth in listOf(8, 16, 24, 32)
 }

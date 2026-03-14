@@ -5,7 +5,6 @@ import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.LiveData
 import androidx.lifecycle.MutableLiveData
 import androidx.lifecycle.viewModelScope
-import com.example.audiorecorder.R
 import com.example.audiorecorder.config.AudioConfig
 import com.example.audiorecorder.recorder.AudioRecorder
 import com.example.audiorecorder.recorder.RecorderState
@@ -38,7 +37,7 @@ class RecorderViewModel(application: Application) : AndroidViewModel(application
     init {
         setupRecorderListener()
         loadConfigurations()
-        _statusMessage.value = getString(R.string.ready_to_record)
+        _statusMessage.value = "Ready to record"
     }
 
     /**
@@ -53,7 +52,7 @@ class RecorderViewModel(application: Application) : AndroidViewModel(application
                     val defaultConfig = configs[0]
                     audioRecorder.setAudioConfig(defaultConfig)
                     _currentConfig.value = defaultConfig
-                    _statusMessage.value = "Configuration loaded: ${configs.size} configs"
+                    _statusMessage.value = "Ready to record"
                 }
             })
         }
@@ -103,19 +102,23 @@ class RecorderViewModel(application: Application) : AndroidViewModel(application
     fun startRecording() {
         if (_recorderState.value == RecorderState.RECORDING) return
 
+        // Reset error state before starting new recording
+        _errorMessage.value = null
+        if (_recorderState.value == RecorderState.ERROR) {
+            _recorderState.value = RecorderState.IDLE
+        }
+
         updateUI({
-            _statusMessage.value = getString(R.string.status_preparing)
+            _statusMessage.value = "Preparing..."
         })
 
         viewModelScope.launch(Dispatchers.IO) {
             val success = audioRecorder.startRecording()
             if (!success) {
-                // If startRecording returns false, error should already be reported via listener
-                // But ensure UI is in correct state
                 updateUI({
                     if (_recorderState.value != RecorderState.ERROR) {
                         _recorderState.value = RecorderState.ERROR
-                        _statusMessage.value = getString(R.string.error_recording_failed)
+                        _statusMessage.value = "Recording Failed"
                     }
                 }, clearError = false)
             }
@@ -125,7 +128,7 @@ class RecorderViewModel(application: Application) : AndroidViewModel(application
     fun stopRecording() {
         if (_recorderState.value != RecorderState.RECORDING) return
 
-        _statusMessage.value = getString(R.string.status_stopping)
+        _statusMessage.value = "Stopping..."
         audioRecorder.stopRecording()
     }
 
@@ -146,7 +149,7 @@ class RecorderViewModel(application: Application) : AndroidViewModel(application
         _errorMessage.value = null
         if (_recorderState.value == RecorderState.ERROR) {
             _recorderState.value = RecorderState.IDLE
-            _statusMessage.value = getString(R.string.ready_to_record)
+            _statusMessage.value = "Ready to record"
         }
     }
 
@@ -155,26 +158,34 @@ class RecorderViewModel(application: Application) : AndroidViewModel(application
         audioRecorder.release()
     }
 
+    fun release() {
+        audioRecorder.release()
+    }
+
+    fun isRecording(): Boolean {
+        return audioRecorder.isRecording()
+    }
+
     private fun setupRecorderListener() {
         audioRecorder.setRecordingListener(object : AudioRecorder.RecordingListener {
             override fun onRecordingStarted() {
                 updateUI({
                     _recorderState.value = RecorderState.RECORDING
-                    _statusMessage.value = getString(R.string.recording)
+                    _statusMessage.value = "Recording..."
                 })
             }
 
             override fun onRecordingStopped() {
                 updateUI({
                     _recorderState.value = RecorderState.IDLE
-                    _statusMessage.value = getString(R.string.recording_stopped)
+                    _statusMessage.value = "Recording Stopped"
                 })
             }
 
             override fun onRecordingError(error: String) {
                 updateUI({
                     _recorderState.value = RecorderState.ERROR
-                    _statusMessage.value = getString(R.string.error_recording_failed)
+                    _statusMessage.value = "Recording Failed"
                     _errorMessage.value = error
                 }, clearError = false)
             }
@@ -192,6 +203,4 @@ class RecorderViewModel(application: Application) : AndroidViewModel(application
             }
         }
     }
-
-    private fun getString(resId: Int): String = getApplication<Application>().getString(resId)
 }

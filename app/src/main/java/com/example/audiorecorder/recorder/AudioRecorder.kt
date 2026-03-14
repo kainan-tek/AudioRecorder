@@ -14,20 +14,13 @@ import kotlinx.coroutines.cancel
 import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
 import java.io.File
-import java.util.concurrent.atomic.AtomicBoolean
 
-/**
- * Recording state enumeration
- */
 enum class RecorderState {
-    IDLE,       // Idle state
-    RECORDING,  // Recording
-    ERROR       // Error state
+    IDLE, RECORDING, ERROR
 }
 
 /**
- * Audio recorder core class
- * Supports configurable recording parameters
+ * Audio recorder using AudioRecord API
  */
 class AudioRecorder(private val context: Context) {
 
@@ -35,16 +28,13 @@ class AudioRecorder(private val context: Context) {
         private const val TAG = "AudioRecorder"
     }
 
-    // Recording components
     private var audioRecord: AudioRecord? = null
-    private var waveFile: WavFile? = null
+    private var wavFile: WavFile? = null
 
-    // Recording state
-    private val isRecording = AtomicBoolean(false)
+    @Volatile
+    private var state = RecorderState.IDLE
     private var recordingJob: Job? = null
     private val recordingScope = CoroutineScope(Dispatchers.IO)
-
-    // Audio configuration
     private var currentConfig: AudioConfig = AudioConfig()
 
     // Recording listener
@@ -60,68 +50,58 @@ class AudioRecorder(private val context: Context) {
         this.listener = listener
     }
 
-    /**
-     * Set audio configuration
-     */
     fun setAudioConfig(config: AudioConfig) {
-        if (isRecording.get()) {
+        if (state == RecorderState.RECORDING) {
             Log.w(TAG, "Cannot change configuration while recording")
             return
         }
         currentConfig = config
         Log.i(TAG, "Configuration updated: ${config.description}")
-        Log.d(TAG, getDetailedInfo())
     }
 
-    /**
-     * Start audio recording
-     */
     fun startRecording(): Boolean {
         Log.d(TAG, "Starting recording")
 
-        if (isRecording.get()) {
-            Log.i(TAG, "Already recording, stopping current recording first")
-            stopRecording()
+        if (state == RecorderState.RECORDING) {
+            Log.w(TAG, "Already recording")
+            listener?.onRecordingError("Already recording")
+            return false
+        }
+        if (state == RecorderState.ERROR) {
+            state = RecorderState.IDLE
         }
 
         return try {
-            // Create output file
             if (!createOutputFile()) {
                 return false
             }
-
-            // Initialize recorder
             if (!initializeAudioRecord()) {
                 return false
             }
 
-            // Start recording
-            isRecording.set(true)
+            state = RecorderState.RECORDING
             startRecordingLoop()
             listener?.onRecordingStarted()
 
             Log.i(TAG, "Recording started successfully")
             true
         } catch (e: SecurityException) {
-            handleError("[PERMISSION] Recording permission denied: ${e.message}")
+            handleError("${AudioConstants.ErrorTypes.PERMISSION} Recording permission denied: ${e.message}")
             false
         } catch (e: Exception) {
-            handleError("[STREAM] Recording initialization failed: ${e.message}")
+            handleError("${AudioConstants.ErrorTypes.STREAM} Recording initialization failed: ${e.message}")
             false
         }
     }
 
-    /**
-     * Stop recording
-     */
     fun stopRecording() {
         Log.d(TAG, "Stopping recording")
 
-        if (!isRecording.get()) {
+        if (state != RecorderState.RECORDING) {
             return
         }
 
-        isRecording.set(false)
+        state = RecorderState.IDLE
         recordingJob?.cancel()
         releaseResources()
         listener?.onRecordingStopped()
@@ -129,18 +109,19 @@ class AudioRecorder(private val context: Context) {
         Log.i(TAG, "Recording stopped")
     }
 
-    /**
-     * Release all resources
-     */
     fun release() {
-        Log.d(TAG, "Releasing recorder resources")
         stopRecording()
-        listener = null  // Clear listener reference to prevent memory leaks
+        listener = null
         try {
             recordingScope.cancel()
         } catch (e: Exception) {
             Log.w(TAG, "Error canceling recording scope", e)
         }
+        Log.d(TAG, "AudioRecorder resources released")
+    }
+
+    fun isRecording(): Boolean {
+        return state == RecorderState.RECORDING
     }
 
     private fun createOutputFile(): Boolean {
@@ -148,29 +129,29 @@ class AudioRecorder(private val context: Context) {
             currentConfig.audioFilePath.takeIf { it.isNotEmpty() } ?: generateOutputFilePath()
 
         return try {
-            waveFile = WavFile(outputPath)
+            wavFile = WavFile(outputPath)
             val channelCount = currentConfig.channelCount
             val bitsPerSample = currentConfig.audioFormat
 
-            if (waveFile!!.create(currentConfig.sampleRate, channelCount, bitsPerSample)) {
+            if (wavFile!!.create(currentConfig.sampleRate, channelCount, bitsPerSample)) {
                 Log.d(TAG, "Output file created: $outputPath (${channelCount} channels)")
                 true
             } else {
                 val file = File(outputPath)
                 val parentDir = file.parentFile
                 val errorMsg = if (parentDir != null && !parentDir.canWrite()) {
-                    "[FILE] No write permission for directory: ${parentDir.absolutePath}"
+                    "${AudioConstants.ErrorTypes.FILE} No write permission for directory: ${parentDir.absolutePath}"
                 } else {
-                    "[FILE] Cannot create output file: $outputPath"
+                    "${AudioConstants.ErrorTypes.FILE} Cannot create output file: $outputPath"
                 }
                 handleError(errorMsg)
                 false
             }
         } catch (e: SecurityException) {
-            handleError("[PERMISSION] Permission denied when creating file: $outputPath - ${e.message}")
+            handleError("${AudioConstants.ErrorTypes.PERMISSION} Permission denied when creating file: $outputPath - ${e.message}")
             false
         } catch (e: Exception) {
-            handleError("[FILE] Failed to create output file: $outputPath - ${e.message}")
+            handleError("${AudioConstants.ErrorTypes.FILE} Failed to create output file: $outputPath - ${e.message}")
             false
         }
     }
@@ -185,15 +166,11 @@ class AudioRecorder(private val context: Context) {
                 AudioConstants.getFormatFromBitDepth(currentConfig.audioFormat)
             )
             if (minBufferSize <= 0) {
-                handleError("[PARAM] Unsupported audio parameter combination")
+                handleError("${AudioConstants.ErrorTypes.PARAM} Unsupported audio parameter combination")
                 return false
             }
 
             val bufferSize = minBufferSize * currentConfig.bufferMultiplier
-            Log.d(
-                TAG,
-                "Buffer calculation: minBufferSize=$minBufferSize, multiplier=${currentConfig.bufferMultiplier}, final=$bufferSize"
-            )
 
             audioRecord = AudioRecord.Builder()
                 .setAudioSource(AudioConstants.getAudioSource(currentConfig.audioSource))
@@ -205,17 +182,17 @@ class AudioRecorder(private val context: Context) {
                 ).setBufferSizeInBytes(bufferSize).build()
 
             if (audioRecord?.state != AudioRecord.STATE_INITIALIZED) {
-                handleError("[STREAM] AudioRecord initialization failed")
+                handleError("${AudioConstants.ErrorTypes.STREAM} AudioRecord initialization failed")
                 return false
             }
 
             Log.i(TAG, "AudioRecord initialized successfully - ${currentConfig.description}")
             true
         } catch (_: SecurityException) {
-            handleError("[PERMISSION] Recording permission denied")
+            handleError("${AudioConstants.ErrorTypes.PERMISSION} Recording permission denied")
             false
         } catch (e: Exception) {
-            handleError("[STREAM] AudioRecord creation failed: ${e.message}")
+            handleError("${AudioConstants.ErrorTypes.STREAM} AudioRecord creation failed: ${e.message}")
             false
         }
     }
@@ -226,18 +203,18 @@ class AudioRecorder(private val context: Context) {
         val bitsPerSample = currentConfig.audioFormat
 
         return when {
-            sampleRate !in 8000..192000 -> {
-                handleError("[PARAM] Unsupported sample rate: ${sampleRate}Hz")
+            !AudioConstants.isValidSampleRate(sampleRate) -> {
+                handleError("${AudioConstants.ErrorTypes.PARAM} Unsupported sample rate: ${sampleRate}Hz")
                 false
             }
 
-            channelCount !in 1..16 -> {
-                handleError("[PARAM] Unsupported channel count: $channelCount")
+            !AudioConstants.isValidChannelCount(channelCount) -> {
+                handleError("${AudioConstants.ErrorTypes.PARAM} Unsupported channel count: $channelCount")
                 false
             }
 
-            bitsPerSample !in listOf(8, 16, 24, 32) -> {
-                handleError("[PARAM] Unsupported bit depth: ${bitsPerSample}bit")
+            !AudioConstants.isValidBitDepth(bitsPerSample) -> {
+                handleError("${AudioConstants.ErrorTypes.PARAM} Unsupported bit depth: ${bitsPerSample}bit")
                 false
             }
 
@@ -261,52 +238,36 @@ class AudioRecorder(private val context: Context) {
             try {
                 audioRecord.startRecording()
                 Log.i(TAG, "Started recording - ${currentConfig.description}")
-                Log.d(
-                    TAG,
-                    "AudioRecord buffer: $audioRecordBufferSize bytes, Read buffer: $readBufferSize bytes"
-                )
 
-                while (isActive && isRecording.get()) {
+                while (isActive && state == RecorderState.RECORDING) {
                     val bytesRead = audioRecord.read(buffer, 0, buffer.size)
                     if (bytesRead <= 0) {
                         Log.w(TAG, "AudioRecord read failed or reached end: $bytesRead")
                         break
                     }
 
-                    waveFile?.writeAudioData(buffer, 0, bytesRead)
+                    wavFile?.writeAudioData(buffer, 0, bytesRead)
                     totalBytes += bytesRead
 
-                    // Periodically output recording progress (every 1MB)
-                    if (totalBytes % (1024 * 1024L) == 0L && totalBytes > 0) {
+                    // Log progress every 5MB
+                    if (totalBytes % (5 * 1024 * 1024L) == 0L && totalBytes > 0) {
                         val mbRecorded = totalBytes / (1024.0 * 1024.0)
-                        Log.d(
-                            TAG, "Recording progress: ${
-                                String.format(
-                                    java.util.Locale.US, "%.1f", mbRecorded
-                                )
-                            }MB"
-                        )
+                        Log.v(TAG, "Progress: %.1fMB".format(mbRecorded))
                     }
                 }
 
-                if (isRecording.get()) {
+                if (state == RecorderState.RECORDING) {
                     val mbRecorded = totalBytes / (1024.0 * 1024.0)
-                    Log.i(
-                        TAG, "Recording completed: ${
-                            String.format(
-                                java.util.Locale.US, "%.1f", mbRecorded
-                            )
-                        }MB"
-                    )
+                    Log.i(TAG, "Recording completed: %.1fMB".format(mbRecorded))
                     stopRecording()
                 }
             } catch (e: SecurityException) {
-                if (isRecording.get()) {
-                    handleError("[PERMISSION] Recording permission denied: ${e.message}")
+                if (state == RecorderState.RECORDING) {
+                    handleError("${AudioConstants.ErrorTypes.PERMISSION} Recording permission denied: ${e.message}")
                 }
             } catch (e: Exception) {
-                if (isRecording.get()) {
-                    handleError("[STREAM] Recording error: ${e.message}")
+                if (state == RecorderState.RECORDING) {
+                    handleError("${AudioConstants.ErrorTypes.STREAM} Recording error: ${e.message}")
                 }
             }
         }
@@ -318,25 +279,22 @@ class AudioRecorder(private val context: Context) {
     private fun releaseResources() {
         try {
             audioRecord?.apply {
-                if (state == AudioRecord.STATE_INITIALIZED) {
+                if (this.state == AudioRecord.STATE_INITIALIZED) {
                     stop()
                 }
                 release()
             }
             audioRecord = null
 
-            waveFile?.close()
-            waveFile = null
+            wavFile?.close()
+            wavFile = null
         } catch (e: Exception) {
             Log.e(TAG, "Error releasing resources", e)
         }
     }
 
-    /**
-     * Handle errors consistently
-     */
     private fun handleError(message: String) {
-        isRecording.set(false)  // Stop recording on error
+        state = RecorderState.ERROR
         Log.e(TAG, "Error: $message")
         listener?.onRecordingError(message)
         releaseResources()
@@ -352,20 +310,5 @@ class AudioRecorder(private val context: Context) {
         val sampleRateK = currentConfig.sampleRate / 1000
         val fileName = "rec_${dateTime}_${sampleRateK}k_${channelCount}ch_${bitsPerSample}bit.wav"
         return File(directory, fileName).absolutePath
-    }
-
-    /**
-     * Get detailed configuration information
-     */
-    fun getDetailedInfo(): String {
-        return buildString {
-            appendLine("Configuration: ${currentConfig.description}")
-            appendLine("Audio Source: ${currentConfig.audioSource}")
-            appendLine("Sample Rate: ${currentConfig.sampleRate}Hz")
-            appendLine("Channel Count: ${currentConfig.channelCount}")
-            appendLine("Audio Format: ${currentConfig.audioFormat}bit")
-            appendLine("Buffer Multiplier: ${currentConfig.bufferMultiplier}x")
-            appendLine("Output File: ${currentConfig.audioFilePath}")
-        }.trim()
     }
 }
