@@ -161,24 +161,15 @@ class WavFile(private val filePath: String) {
             return false
         }
 
-        if (sampleRate !in 8000..192000) {
-            Log.w(
-                TAG, "Sample rate outside common range: ${sampleRate}Hz (supported: 8000-192000Hz)"
-            )
-        }
-
         if (channelCount > 16) {
             Log.e(
                 TAG,
                 "Channel count exceeds supported range: $channelCount channels (supported: 1-16)"
             )
             return false
-        } else if (channelCount > 12) {
-            Log.w(
-                TAG,
-                "High channel count: $channelCount channels, may not be supported by all devices"
-            )
-        } else if (channelCount == 12) {
+        }
+
+        if (channelCount == 12) {
             Log.i(TAG, "Detected 7.1.4 audio format (12 channels)")
         }
 

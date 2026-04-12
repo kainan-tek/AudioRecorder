@@ -14,6 +14,7 @@ WAV file output.
 - [API Reference](#api-reference)
 - [Troubleshooting](#troubleshooting)
 - [License](#license)
+- [Contact](#contact)
 
 ## Introduction
 
@@ -259,7 +260,24 @@ adb logcat -s AudioRecord AudioFlinger
 
 This project is licensed under the MIT License. See the [LICENSE](LICENSE) file for details.
 
----
-
 **Note**: This project is for learning and testing purposes only. Please comply with relevant
 recording laws and regulations.
+
+## Contact 
+
+ - **Author**: kainan-tek 
+ - **Email**: kainanos@outlook.com 
+ - **GitHub**: https://github.com/kainan-tek/AudioRecorder 
+ - **Issue**: `https://github.com/kainan-tek/AudioRecorder/issues` 
+
+ ---
+
+ <div align="center"> 
+
+ **If this project helps you, please give it a ⭐ Star!** 
+
+ Made with ❤️ by kainan-tek 
+
+ [⬆ Back to top](#audiorecorder) 
+
+ </div>

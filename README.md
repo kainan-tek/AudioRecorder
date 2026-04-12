@@ -13,6 +13,7 @@
 - [API 参考](#api-参考)
 - [故障排除](#故障排除)
 - [许可证](#许可证)
+- [联系方式](#联系方式)
 
 ## 项目简介
 
@@ -253,6 +254,23 @@ adb logcat -s AudioRecord AudioFlinger
 
 本项目采用 MIT License 许可证。详细信息请参阅 [LICENSE](LICENSE) 文件。
 
----
-
 **注意**: 本项目仅供学习和测试使用，请遵守相关录音法律法规。
+
+## 联系方式 
+
+ - **作者**: kainan-tek 
+ - **邮箱**: kainanos@outlook.com 
+ - **GitHub**: https://github.com/kainan-tek/AudioRecorder 
+ - **问题反馈**: `https://github.com/kainan-tek/AudioRecorder/issues` 
+
+ ---
+
+ <div align="center"> 
+
+ **如果这个项目对你有帮助，请给个 ⭐ Star！** 
+
+ Made with ❤️ by kainan-tek 
+
+ [⬆ 回到顶部](#audiorecorder) 
+
+ </div>

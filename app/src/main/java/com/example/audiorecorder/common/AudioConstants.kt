@@ -96,15 +96,12 @@ object AudioConstants {
     /**
      * Get audio format from bit depth, supporting multiple bit depths.
      */
-    fun getFormatFromBitDepth(bitsPerSample: Int): Int {
-        val audioFormats = mapOf(
-            8 to AudioFormat.ENCODING_PCM_8BIT,
-            16 to AudioFormat.ENCODING_PCM_16BIT,
-            24 to AudioFormat.ENCODING_PCM_24BIT_PACKED,
-            32 to AudioFormat.ENCODING_PCM_32BIT
-        )
-
-        return audioFormats[bitsPerSample] ?: run {
+    fun getFormatFromBitDepth(bitsPerSample: Int): Int = when (bitsPerSample) {
+        8 -> AudioFormat.ENCODING_PCM_8BIT
+        16 -> AudioFormat.ENCODING_PCM_16BIT
+        24 -> AudioFormat.ENCODING_PCM_24BIT_PACKED
+        32 -> AudioFormat.ENCODING_PCM_32BIT
+        else -> {
             android.util.Log.w(
                 "AudioConstants", "Unsupported bit depth: $bitsPerSample, using 16-bit"
             )
@@ -117,19 +114,15 @@ object AudioConstants {
      * Uses a predefined mapping table similar to AudioPlayer.AudioConstants.
      * For unsupported counts, falls back to stereo and logs a warning.
      */
-    fun getChannelMask(channelCount: Int): Int {
-        val channelMasks = mapOf(
-            1 to AudioFormat.CHANNEL_IN_MONO, 2 to AudioFormat.CHANNEL_IN_STEREO,
-            // Multi-channel input masks (requires device support)
-            // These values represent specific channel configurations for professional audio recording
-            8 to 0x3FC,      // 8-channel: 6 mic + 2 reference (for active noise cancellation)
-            10 to 0xFFC,     // 10-channel: 5.1.4 surround sound recording
-            12 to 0x3FFC,    // 12-channel: 7.1.4 surround sound recording
-            14 to 0xFFFFC,   // 14-channel: extended surround configuration
-            16 to 0x3FFFFC   // 16-channel: full channel configuration
-        )
-
-        return channelMasks[channelCount] ?: run {
+    fun getChannelMask(channelCount: Int): Int = when (channelCount) {
+        1 -> AudioFormat.CHANNEL_IN_MONO
+        2 -> AudioFormat.CHANNEL_IN_STEREO
+        8 -> 0x3FC      // 8-channel: 6 mic + 2 reference (for active noise cancellation)
+        10 -> 0xFFC     // 10-channel: 5.1.4 surround sound recording
+        12 -> 0x3FFC    // 12-channel: 7.1.4 surround sound recording
+        14 -> 0xFFFFC   // 14-channel: extended surround configuration
+        16 -> 0x3FFFFC  // 16-channel: full channel configuration
+        else -> {
             android.util.Log.w(
                 "AudioConstants",
                 "Unsupported input channel count: $channelCount, using CHANNEL_IN_STEREO"

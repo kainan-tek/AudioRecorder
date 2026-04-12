@@ -246,7 +246,11 @@ class AudioRecorder(private val context: Context) {
                         break
                     }
 
-                    wavFile?.writeAudioData(buffer, 0, bytesRead)
+                    val writeSuccess = wavFile?.writeAudioData(buffer, 0, bytesRead) ?: false
+                    if (!writeSuccess) {
+                        Log.e(TAG, "Failed to write audio data to file")
+                        // Continue recording even if write fails (might be temporary permission issue)
+                    }
                     totalBytes += bytesRead
 
                     // Log progress every 5MB
